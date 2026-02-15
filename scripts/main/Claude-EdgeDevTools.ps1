@@ -6,6 +6,21 @@
 
 $ErrorActionPreference = "Stop"
 
+# ===== ログ記録開始 =====
+$LogPath = $null
+$LogTimestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+$LogDir = $env:TEMP
+$LogPrefix = "claude-devtools-edge"
+$LogPath = Join-Path $LogDir "${LogPrefix}-${LogTimestamp}.log"
+
+try {
+    Start-Transcript -Path $LogPath -Append -ErrorAction Stop
+    Write-Host "📝 ログ記録開始: $LogPath" -ForegroundColor Gray
+} catch {
+    Write-Warning "ログ記録の開始に失敗しましたが続行します: $_"
+    $LogPath = $null
+}
+
 # ===== ヘルパー関数 =====
 
 # SSH引数を安全にエスケープ (bash変数として)
@@ -13,6 +28,123 @@ function Escape-SSHArgument {
     param([string]$Value)
     # シングルクォートで囲み、内部のシングルクォートを '\'' でエスケープ
     return "'" + ($Value -replace "'", "'\\''") + "'"
+}
+
+# config.jsonバックアップ関数
+function Backup-ConfigFile {
+    param(
+        [string]$ConfigPath,
+        [string]$BackupDir,
+        [int]$MaxBackups = 10,
+        [bool]$MaskSensitive = $true,
+        [string[]]$SensitiveKeys = @()
+    )
+
+    if (-not (Test-Path $ConfigPath)) {
+        Write-Warning "バックアップ対象が見つかりません: $ConfigPath"
+        return
+    }
+
+    # バックアップディレクトリ作成
+    $BackupDirFull = Join-Path (Split-Path $ConfigPath -Parent) $BackupDir
+    if (-not (Test-Path $BackupDirFull)) {
+        New-Item -ItemType Directory -Path $BackupDirFull -Force | Out-Null
+    }
+
+    # タイムスタンプ付きバックアップファイル名
+    $Timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+    $BackupFileName = "config-${Timestamp}.json"
+    $BackupPath = Join-Path $BackupDirFull $BackupFileName
+
+    # config.json読み込み
+    $ConfigObj = Get-Content $ConfigPath -Raw | ConvertFrom-Json
+
+    # 機密情報マスク
+    if ($MaskSensitive) {
+        foreach ($keyPath in $SensitiveKeys) {
+            $keys = $keyPath -split '\.'
+            $currentObj = $ConfigObj
+
+            # ネストされたキーにアクセス
+            for ($i = 0; $i -lt $keys.Count - 1; $i++) {
+                if ($currentObj.PSObject.Properties.Name -contains $keys[$i]) {
+                    $currentObj = $currentObj.$($keys[$i])
+                } else {
+                    break
+                }
+            }
+
+            # 最終キーの値をマスク
+            $finalKey = $keys[-1]
+            if ($currentObj.PSObject.Properties.Name -contains $finalKey) {
+                $originalValue = $currentObj.$finalKey
+                if ($originalValue) {
+                    $currentObj.$finalKey = "***MASKED*** (length: $($originalValue.Length))"
+                }
+            }
+        }
+    }
+
+    # バックアップ保存
+    $ConfigObj | ConvertTo-Json -Depth 10 | Out-File -FilePath $BackupPath -Encoding UTF8 -Force
+    Write-Host "💾 config.jsonをバックアップしました: $BackupFileName" -ForegroundColor Green
+
+    # 古いバックアップ削除
+    $ExistingBackups = Get-ChildItem -Path $BackupDirFull -Filter "config-*.json" |
+        Sort-Object LastWriteTime -Descending
+
+    if ($ExistingBackups.Count -gt $MaxBackups) {
+        $ToDelete = $ExistingBackups | Select-Object -Skip $MaxBackups
+        $ToDelete | Remove-Item -Force
+        Write-Host "🧹 古いバックアップを削除しました: $($ToDelete.Count)件" -ForegroundColor Gray
+    }
+}
+
+# 最近使用プロジェクト履歴管理関数
+function Get-RecentProjects {
+    param([string]$HistoryPath)
+
+    if (-not (Test-Path $HistoryPath)) {
+        return @()
+    }
+
+    try {
+        $history = Get-Content $HistoryPath -Raw | ConvertFrom-Json
+        return $history.projects
+    } catch {
+        Write-Warning "履歴ファイル読み込みエラー: $_"
+        return @()
+    }
+}
+
+function Update-RecentProjects {
+    param(
+        [string]$ProjectName,
+        [string]$HistoryPath,
+        [int]$MaxHistory = 10
+    )
+
+    $recentList = Get-RecentProjects -HistoryPath $HistoryPath
+
+    if ($recentList -is [PSCustomObject]) {
+        $recentList = @($recentList)
+    }
+
+    # 新規選択を先頭に追加（重複削除）
+    $newList = @($ProjectName) + ($recentList | Where-Object { $_ -ne $ProjectName })
+    $newList = $newList[0..([Math]::Min($MaxHistory - 1, $newList.Count - 1))]
+
+    $historyDir = Split-Path $HistoryPath -Parent
+    if (-not (Test-Path $historyDir)) {
+        New-Item -ItemType Directory -Path $historyDir -Force | Out-Null
+    }
+
+    $historyObj = @{
+        lastUpdated = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+        projects = $newList
+    }
+
+    $historyObj | ConvertTo-Json -Depth 3 | Out-File -FilePath $HistoryPath -Encoding UTF8 -Force
 }
 
 # ===== グローバル変数 (クリーンアップ用) =====
@@ -46,6 +178,11 @@ trap {
         }
     }
 
+    # ログパス表示（エラー発生時）
+    if ($LogPath) {
+        Write-Host "`n📄 詳細ログ: $LogPath" -ForegroundColor Cyan
+    }
+
     # Linux側ポートクリーンアップ（BatchMode=yesでパスワード要求を防止）
     if ($Global:DevToolsPort -and $Global:LinuxHost) {
         try {
@@ -71,6 +208,36 @@ if (Test-Path $ConfigPath) {
     Write-Host "✅ 設定ファイルを読み込みました: $ConfigPath"
 } else {
     Write-Error "❌ 設定ファイルが見つかりません: $ConfigPath"
+}
+
+# 古いログファイルクリーンアップ
+if ($Config.logging -and $Config.logging.keepDays -gt 0) {
+    try {
+        $LogDirPath = $ExecutionContext.InvokeCommand.ExpandString($Config.logging.logDir)
+        $CutoffDate = (Get-Date).AddDays(-$Config.logging.keepDays)
+
+        Get-ChildItem -Path $LogDirPath -Filter "${LogPrefix}*.log" -File |
+            Where-Object { $_.LastWriteTime -lt $CutoffDate } |
+            Remove-Item -Force -ErrorAction SilentlyContinue
+
+        Write-Host "🧹 古いログファイルをクリーンアップしました ($($Config.logging.keepDays)日以前)" -ForegroundColor Gray
+    } catch {
+        Write-Warning "ログクリーンアップに失敗: $_"
+    }
+}
+
+# config.json自動バックアップ
+if ($Config.backupConfig -and $Config.backupConfig.enabled) {
+    try {
+        Backup-ConfigFile `
+            -ConfigPath $ConfigPath `
+            -BackupDir $Config.backupConfig.backupDir `
+            -MaxBackups $Config.backupConfig.maxBackups `
+            -MaskSensitive $Config.backupConfig.maskSensitive `
+            -SensitiveKeys $Config.backupConfig.sensitiveKeys
+    } catch {
+        Write-Warning "バックアップに失敗しましたが続行します: $_"
+    }
 }
 
 $ZRoot      = $Config.zDrive
@@ -252,8 +419,21 @@ if ($Projects.Count -eq 0) {
 
 Write-Host "📦 プロジェクトを選択してください`n"
 
+# 履歴読み込み
+$HistoryEnabled = $Config.recentProjects.enabled
+$HistoryPath = $ExecutionContext.InvokeCommand.ExpandString($Config.recentProjects.historyFile)
+$RecentProjects = @()
+
+if ($HistoryEnabled) {
+    $RecentProjects = Get-RecentProjects -HistoryPath $HistoryPath
+}
+
+# プロジェクト一覧表示（⭐付き）
 for ($i = 0; $i -lt $Projects.Count; $i++) {
-    Write-Host "[$($i+1)] $($Projects[$i].Name)"
+    $projectName = $Projects[$i].Name
+    $isRecent = $RecentProjects -contains $projectName
+    $marker = if ($isRecent) { "⭐ " } else { "   " }
+    Write-Host "[$($i+1)]$marker$projectName"
 }
 
 # 入力検証付きインデックス選択
@@ -284,6 +464,16 @@ $ProjectName = $Project.Name
 $ProjectRoot = $Project.FullName
 
 Write-Host "`n✅ 選択プロジェクト: $ProjectName"
+
+# 履歴更新
+if ($HistoryEnabled) {
+    try {
+        Update-RecentProjects -ProjectName $ProjectName -HistoryPath $HistoryPath -MaxHistory $Config.recentProjects.maxHistory
+        Write-Host "📝 最近使用プロジェクトに記録しました" -ForegroundColor Gray
+    } catch {
+        Write-Warning "履歴更新に失敗しましたが続行します: $_"
+    }
+}
 
 # ============================================================
 # ② SSH接続事前確認
@@ -473,9 +663,10 @@ if ($devToolsReady) {
     Write-Host ""
 
     # バージョン情報を表示 ($versionInfo は既に取得済み)
-    Write-Host "📋 $BrowserName 情報:"
-    Write-Host "   - Browser: $($versionInfo.Browser)"
-    Write-Host "   - Protocol: $($versionInfo.'Protocol-Version')"
+    try {
+        Write-Host "📋 $BrowserName 情報:"
+        Write-Host "   - Browser: $($versionInfo.Browser)"
+        Write-Host "   - Protocol: $($versionInfo.'Protocol-Version')"
         Write-Host "   - V8: $($versionInfo.'V8-Version')"
     } catch {
         Write-Host "   (バージョン情報取得スキップ)"
@@ -1143,3 +1334,13 @@ Write-Host ""
 $EscapedLinuxBaseForSSH = Escape-SSHArgument $LinuxBase
 $EscapedProjectNameForSSH = Escape-SSHArgument $ProjectName
 ssh -t -o ControlMaster=no -o ControlPath=none -R "${DevToolsPort}:127.0.0.1:${DevToolsPort}" $LinuxHost "cd $EscapedLinuxBaseForSSH/$EscapedProjectNameForSSH && ./run-claude.sh"
+
+# ===== ログ記録終了 =====
+if ($LogPath) {
+    try {
+        Stop-Transcript
+        Write-Host "`n📝 ログ記録終了: $LogPath" -ForegroundColor Gray
+    } catch {
+        # Transcript未開始の場合はエラーを無視
+    }
+}

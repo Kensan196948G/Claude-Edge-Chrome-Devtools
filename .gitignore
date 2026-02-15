@@ -39,6 +39,9 @@ DevTools-chrome-*
 .mcp.json.bak.*
 .mcp.json.backup.*
 
+# config.json バックアップ（機密情報含む可能性があるため除外）
+config/backups/*.json
+
 # バックアップファイル
 *.bak
 *.backup

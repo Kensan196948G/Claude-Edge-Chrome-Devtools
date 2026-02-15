@@ -32,6 +32,9 @@ echo  [Diagnostics]
 echo  7. MCP Health Check
 echo  8. Drive Mapping Diagnostic
 echo.
+echo  [Batch Operations]
+echo  9. Launch Multiple Projects
+echo.
 echo  0. Exit
 echo.
 echo ===============================================
@@ -78,6 +81,10 @@ if "%choice%"=="7" (
 )
 if "%choice%"=="8" (
     call :drive_diagnostic
+    goto menu
+)
+if "%choice%"=="9" (
+    call :launch_multiple
     goto menu
 )
 if "%choice%"=="0" (
@@ -234,6 +241,32 @@ echo Press any key to run diagnostic...
 pause >nul
 
 pwsh -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\test\test-drive-mapping.ps1"
+
+echo.
+pause
+goto :eof
+
+
+:launch_multiple
+cls
+echo.
+echo ===============================================
+echo  Launch Multiple Projects
+===============================================
+echo.
+echo This will allow you to select and launch
+echo multiple projects simultaneously with
+echo dedicated browser profiles and ports.
+echo.
+echo How to select:
+echo   Single project: 3
+echo   Multiple projects: 1,3,5
+echo   Range selection: 1-3
+echo.
+echo Press any key to continue...
+pause >nul
+
+pwsh -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\main\Claude-ChromeDevTools-Final.ps1"
 
 echo.
 pause

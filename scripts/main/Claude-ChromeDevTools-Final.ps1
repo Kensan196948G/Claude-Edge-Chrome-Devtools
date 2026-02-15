@@ -13,6 +13,9 @@ param(
     [string]$Project = "",           # "" = 対話モード, "project-name" = 非対話モード
 
     [Parameter(Mandatory=$false)]
+    [string]$Projects = "",          # 複数プロジェクト指定（カンマ区切り: "proj1,proj2,proj3"）
+
+    [Parameter(Mandatory=$false)]
     [ValidateRange(0, 65535)]
     [int]$Port = 0,                  # 0 = 自動割り当て, 9222-9229 = 指定ポート
 
@@ -25,6 +28,21 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# ===== ログ記録開始 =====
+$LogPath = $null
+$LogTimestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+$LogDir = $env:TEMP
+$LogPrefix = "claude-devtools-chrome"
+$LogPath = Join-Path $LogDir "${LogPrefix}-${LogTimestamp}.log"
+
+try {
+    Start-Transcript -Path $LogPath -Append -ErrorAction Stop
+    Write-Host "📝 ログ記録開始: $LogPath" -ForegroundColor Gray
+} catch {
+    Write-Warning "ログ記録の開始に失敗しましたが続行します: $_"
+    $LogPath = $null
+}
+
 # ===== ヘルパー関数 =====
 
 # SSH引数を安全にエスケープ (bash変数として)
@@ -32,6 +50,123 @@ function Escape-SSHArgument {
     param([string]$Value)
     # シングルクォートで囲み、内部のシングルクォートを '\'' でエスケープ
     return "'" + ($Value -replace "'", "'\\''") + "'"
+}
+
+# config.jsonバックアップ関数
+function Backup-ConfigFile {
+    param(
+        [string]$ConfigPath,
+        [string]$BackupDir,
+        [int]$MaxBackups = 10,
+        [bool]$MaskSensitive = $true,
+        [string[]]$SensitiveKeys = @()
+    )
+
+    if (-not (Test-Path $ConfigPath)) {
+        Write-Warning "バックアップ対象が見つかりません: $ConfigPath"
+        return
+    }
+
+    # バックアップディレクトリ作成
+    $BackupDirFull = Join-Path (Split-Path $ConfigPath -Parent) $BackupDir
+    if (-not (Test-Path $BackupDirFull)) {
+        New-Item -ItemType Directory -Path $BackupDirFull -Force | Out-Null
+    }
+
+    # タイムスタンプ付きバックアップファイル名
+    $Timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+    $BackupFileName = "config-${Timestamp}.json"
+    $BackupPath = Join-Path $BackupDirFull $BackupFileName
+
+    # config.json読み込み
+    $ConfigObj = Get-Content $ConfigPath -Raw | ConvertFrom-Json
+
+    # 機密情報マスク
+    if ($MaskSensitive) {
+        foreach ($keyPath in $SensitiveKeys) {
+            $keys = $keyPath -split '\.'
+            $currentObj = $ConfigObj
+
+            # ネストされたキーにアクセス
+            for ($i = 0; $i -lt $keys.Count - 1; $i++) {
+                if ($currentObj.PSObject.Properties.Name -contains $keys[$i]) {
+                    $currentObj = $currentObj.$($keys[$i])
+                } else {
+                    break
+                }
+            }
+
+            # 最終キーの値をマスク
+            $finalKey = $keys[-1]
+            if ($currentObj.PSObject.Properties.Name -contains $finalKey) {
+                $originalValue = $currentObj.$finalKey
+                if ($originalValue) {
+                    $currentObj.$finalKey = "***MASKED*** (length: $($originalValue.Length))"
+                }
+            }
+        }
+    }
+
+    # バックアップ保存
+    $ConfigObj | ConvertTo-Json -Depth 10 | Out-File -FilePath $BackupPath -Encoding UTF8 -Force
+    Write-Host "💾 config.jsonをバックアップしました: $BackupFileName" -ForegroundColor Green
+
+    # 古いバックアップ削除
+    $ExistingBackups = Get-ChildItem -Path $BackupDirFull -Filter "config-*.json" |
+        Sort-Object LastWriteTime -Descending
+
+    if ($ExistingBackups.Count -gt $MaxBackups) {
+        $ToDelete = $ExistingBackups | Select-Object -Skip $MaxBackups
+        $ToDelete | Remove-Item -Force
+        Write-Host "🧹 古いバックアップを削除しました: $($ToDelete.Count)件" -ForegroundColor Gray
+    }
+}
+
+# 最近使用プロジェクト履歴管理関数
+function Get-RecentProjects {
+    param([string]$HistoryPath)
+
+    if (-not (Test-Path $HistoryPath)) {
+        return @()
+    }
+
+    try {
+        $history = Get-Content $HistoryPath -Raw | ConvertFrom-Json
+        return $history.projects
+    } catch {
+        Write-Warning "履歴ファイル読み込みエラー: $_"
+        return @()
+    }
+}
+
+function Update-RecentProjects {
+    param(
+        [string]$ProjectName,
+        [string]$HistoryPath,
+        [int]$MaxHistory = 10
+    )
+
+    $recentList = Get-RecentProjects -HistoryPath $HistoryPath
+
+    if ($recentList -is [PSCustomObject]) {
+        $recentList = @($recentList)
+    }
+
+    # 新規選択を先頭に追加（重複削除）
+    $newList = @($ProjectName) + ($recentList | Where-Object { $_ -ne $ProjectName })
+    $newList = $newList[0..([Math]::Min($MaxHistory - 1, $newList.Count - 1))]
+
+    $historyDir = Split-Path $HistoryPath -Parent
+    if (-not (Test-Path $historyDir)) {
+        New-Item -ItemType Directory -Path $historyDir -Force | Out-Null
+    }
+
+    $historyObj = @{
+        lastUpdated = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+        projects = $newList
+    }
+
+    $historyObj | ConvertTo-Json -Depth 3 | Out-File -FilePath $HistoryPath -Encoding UTF8 -Force
 }
 
 # ===== グローバル変数 (クリーンアップ用) =====
@@ -65,6 +200,11 @@ trap {
         }
     }
 
+    # ログパス表示（エラー発生時）
+    if ($LogPath) {
+        Write-Host "`n📄 詳細ログ: $LogPath" -ForegroundColor Cyan
+    }
+
     # Linux側ポートクリーンアップ（BatchMode=yesでパスワード要求を防止）
     if ($Global:DevToolsPort -and $Global:LinuxHost) {
         try {
@@ -90,6 +230,36 @@ if (Test-Path $ConfigPath) {
     Write-Host "✅ 設定ファイルを読み込みました: $ConfigPath"
 } else {
     Write-Error "❌ 設定ファイルが見つかりません: $ConfigPath"
+}
+
+# 古いログファイルクリーンアップ
+if ($Config.logging -and $Config.logging.keepDays -gt 0) {
+    try {
+        $LogDirPath = $ExecutionContext.InvokeCommand.ExpandString($Config.logging.logDir)
+        $CutoffDate = (Get-Date).AddDays(-$Config.logging.keepDays)
+
+        Get-ChildItem -Path $LogDirPath -Filter "${LogPrefix}*.log" -File |
+            Where-Object { $_.LastWriteTime -lt $CutoffDate } |
+            Remove-Item -Force -ErrorAction SilentlyContinue
+
+        Write-Host "🧹 古いログファイルをクリーンアップしました ($($Config.logging.keepDays)日以前)" -ForegroundColor Gray
+    } catch {
+        Write-Warning "ログクリーンアップに失敗: $_"
+    }
+}
+
+# config.json自動バックアップ
+if ($Config.backupConfig -and $Config.backupConfig.enabled) {
+    try {
+        Backup-ConfigFile `
+            -ConfigPath $ConfigPath `
+            -BackupDir $Config.backupConfig.backupDir `
+            -MaxBackups $Config.backupConfig.maxBackups `
+            -MaskSensitive $Config.backupConfig.maskSensitive `
+            -SensitiveKeys $Config.backupConfig.sensitiveKeys
+    } catch {
+        Write-Warning "バックアップに失敗しましたが続行します: $_"
+    }
 }
 
 # config.json 必須フィールド検証
@@ -198,6 +368,7 @@ if (-not $NonInteractive) {
 
     Write-Host "❌ 無効な入力です。1 または 2 を入力してください。" -ForegroundColor Red
 } while ($true)
+}
 
 if ($BrowserChoice -eq "1") {
     $SelectedBrowser = "edge"
@@ -321,50 +492,122 @@ if ($Projects.Count -eq 0) {
 }
 
 # 非対話モード: プロジェクト名から自動選択
-if ($NonInteractive -and $Project) {
-    $SelectedProject = $Projects | Where-Object { $_.Name -eq $Project }
+# 非対話モード: 複数プロジェクト指定対応
+if ($NonInteractive -and ($Project -or $Projects)) {
+    $SelectedProjects = @()
 
-    if (-not $SelectedProject) {
-        Write-Error "❌ プロジェクト '$Project' が見つかりません。利用可能: $($Projects.Name -join ', ')"
+    if ($Projects) {
+        # 複数プロジェクト指定（カンマ区切り）
+        $ProjectNames = $Projects -split ',' | ForEach-Object { $_.Trim() }
+
+        foreach ($projName in $ProjectNames) {
+            $proj = $Projects | Where-Object { $_.Name -eq $projName }
+            if (-not $proj) {
+                Write-Error "❌ プロジェクト '$projName' が見つかりません。利用可能: $($Projects.Name -join ', ')"
+            }
+            $SelectedProjects += $proj
+        }
+
+        Write-Host "📦 選択プロジェクト ($($SelectedProjects.Count)件): $($SelectedProjects.Name -join ', ') (非対話モード)`n" -ForegroundColor Cyan
+    } else {
+        # 単一プロジェクト指定
+        $SelectedProject = $Projects | Where-Object { $_.Name -eq $Project }
+
+        if (-not $SelectedProject) {
+            Write-Error "❌ プロジェクト '$Project' が見つかりません。利用可能: $($Projects.Name -join ', ')"
+        }
+
+        $SelectedProjects = @($SelectedProject)
+        Write-Host "📦 プロジェクト: $($SelectedProject.Name) (非対話モード)`n" -ForegroundColor Cyan
     }
 
-    Write-Host "📦 プロジェクト: $($SelectedProject.Name) (非対話モード)`n" -ForegroundColor Cyan
-    $ProjectName = $SelectedProject.Name
-    $ProjectRoot = $SelectedProject.FullName
+    $ProjectName = $SelectedProjects[0].Name
+    $ProjectRoot = $SelectedProjects[0].FullName
 } else {
     # 対話モード: ユーザーに選択を促す
-    Write-Host "📦 プロジェクトを選択してください`n"
+    Write-Host "📦 プロジェクトを選択してください (複数選択可能)`n"
 
+    # 履歴読み込み
+    $HistoryEnabled = $Config.recentProjects.enabled
+    $HistoryPath = $ExecutionContext.InvokeCommand.ExpandString($Config.recentProjects.historyFile)
+    $RecentProjects = @()
+
+    if ($HistoryEnabled) {
+        $RecentProjects = Get-RecentProjects -HistoryPath $HistoryPath
+    }
+
+    # プロジェクト一覧表示（⭐付き）
     for ($i = 0; $i -lt $Projects.Count; $i++) {
-        Write-Host "[$($i+1)] $($Projects[$i].Name)"
+        $projectName = $Projects[$i].Name
+        $isRecent = $RecentProjects -contains $projectName
+        $marker = if ($isRecent) { "⭐ " } else { "   " }
+        Write-Host "[$($i+1)]$marker$projectName"
     }
 
-    # 入力検証付きインデックス選択
+    Write-Host "`nヒント:"
+    Write-Host "  単一選択: 3"
+    Write-Host "  複数選択: 1,3,5"
+    Write-Host "  範囲選択: 1-3 (プロジェクト1,2,3)"
+    Write-Host ""
+
+    # 複数選択対応の入力検証
     do {
-        $Index = Read-Host "`n番号を入力 (1-$($Projects.Count))"
+        $IndexInput = Read-Host "番号を入力 (1-$($Projects.Count))"
+        $SelectedProjects = @()
+        $inputValid = $true
 
-    # 数値チェック
-    if ($Index -notmatch '^\d+$') {
-        Write-Host "❌ 数字を入力してください。" -ForegroundColor Red
-        continue
-    }
+        try {
+            if ($IndexInput -match '-') {
+                # 範囲指定 (例: 1-3)
+                $rangeParts = $IndexInput -split '-'
+                if ($rangeParts.Count -ne 2) {
+                    throw "無効な範囲指定です"
+                }
+                $start = [int]$rangeParts[0]
+                $end = [int]$rangeParts[1]
 
-    $IndexNum = [int]$Index
+                if ($start -lt 1 -or $end -gt $Projects.Count -or $start -gt $end) {
+                    throw "無効な範囲です: $start-$end"
+                }
 
-    # 範囲チェック
-    if ($IndexNum -lt 1 -or $IndexNum -gt $Projects.Count) {
-        Write-Host "❌ 1から$($Projects.Count)の範囲で入力してください。" -ForegroundColor Red
-        continue
-    }
+                for ($i = $start; $i -le $end; $i++) {
+                    $SelectedProjects += $Projects[$i - 1]
+                }
+            } elseif ($IndexInput -match ',') {
+                # カンマ区切り (例: 1,3,5)
+                $indices = $IndexInput -split ',' | ForEach-Object { $_.Trim() }
 
-    # 検証成功
-    $SelectedProject = $Projects[$IndexNum - 1]
-    break
+                foreach ($idxStr in $indices) {
+                    if ($idxStr -notmatch '^\d+$') {
+                        throw "無効な数値: $idxStr"
+                    }
+                    $idx = [int]$idxStr
+                    if ($idx -lt 1 -or $idx -gt $Projects.Count) {
+                        throw "範囲外のインデックス: $idx"
+                    }
+                    $SelectedProjects += $Projects[$idx - 1]
+                }
+            } else {
+                # 単一選択
+                if ($IndexInput -notmatch '^\d+$') {
+                    throw "数字を入力してください"
+                }
+                $idx = [int]$IndexInput
+                if ($idx -lt 1 -or $idx -gt $Projects.Count) {
+                    throw "1から$($Projects.Count)の範囲で入力してください"
+                }
+                $SelectedProjects += $Projects[$idx - 1]
+            }
+            break
+        } catch {
+            Write-Host "❌ $_" -ForegroundColor Red
+            continue
+        }
+    } while ($true)
 
-} while ($true)
-
-    $ProjectName = $SelectedProject.Name
-    $ProjectRoot = $SelectedProject.FullName
+    # 単一プロジェクト用の変数も設定（後方互換性）
+    $ProjectName = $SelectedProjects[0].Name
+    $ProjectRoot = $SelectedProjects[0].FullName
 }
 
 # プロジェクト確認
@@ -372,7 +615,58 @@ if (-not $ProjectName -or -not $ProjectRoot) {
     Write-Error "❌ プロジェクトが正しく選択されていません"
 }
 
-Write-Host "`n✅ 選択プロジェクト: $ProjectName"
+# 選択プロジェクト確認表示（単数/複数対応）
+if ($SelectedProjects.Count -eq 1) {
+    Write-Host "`n✅ 選択プロジェクト: $ProjectName"
+} else {
+    Write-Host "`n✅ 選択プロジェクト ($($SelectedProjects.Count)件): $($SelectedProjects.Name -join ', ')" -ForegroundColor Green
+}
+
+# 履歴更新（複数プロジェクト対応）
+if ($HistoryEnabled) {
+    try {
+        foreach ($proj in $SelectedProjects) {
+            Update-RecentProjects -ProjectName $proj.Name -HistoryPath $HistoryPath -MaxHistory $Config.recentProjects.maxHistory
+        }
+        if ($SelectedProjects.Count -eq 1) {
+            Write-Host "📝 最近使用プロジェクトに記録しました" -ForegroundColor Gray
+        } else {
+            Write-Host "📝 $($SelectedProjects.Count)件のプロジェクトを履歴に記録しました" -ForegroundColor Gray
+        }
+    } catch {
+        Write-Warning "履歴更新に失敗しましたが続行します: $_"
+    }
+}
+
+# ポート自動割り当て（複数プロジェクト対応）
+$ProjectPortMap = @{}
+$AssignedPorts = @()
+
+if ($SelectedProjects.Count -gt 1) {
+    # 複数プロジェクト: 各プロジェクトにポート割り当て
+    Write-Host "`n📌 ポート割り当て:" -ForegroundColor Cyan
+
+    if ($SelectedProjects.Count -gt $AvailablePorts.Count) {
+        Write-Error "❌ 利用可能なポート不足: 必要 $($SelectedProjects.Count)件, 利用可能 $($AvailablePorts.Count)件"
+    }
+
+    foreach ($proj in $SelectedProjects) {
+        $port = Get-AvailablePort -Ports ($AvailablePorts | Where-Object { $_ -notin $AssignedPorts })
+
+        if (-not $port) {
+            Write-Error "❌ ポート割り当て失敗: $($proj.Name)"
+        }
+
+        $ProjectPortMap[$proj.Name] = $port
+        $AssignedPorts += $port
+        Write-Host "  $($proj.Name) → ポート $port"
+    }
+    Write-Host ""
+} else {
+    # 単一プロジェクト: 既存の$DevToolsPort使用
+    $ProjectPortMap[$ProjectName] = $DevToolsPort
+    $AssignedPorts += $DevToolsPort
+}
 
 # ============================================================
 # ② SSH接続事前確認
@@ -1271,12 +1565,124 @@ Write-Host "✅ リモートセットアップ完了"
 # ============================================================
 Write-Host "`n🎉 セットアップ完了"
 Write-Host ""
-Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-Write-Host "🚀 Claudeを起動します..."
-Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-Write-Host ""
 
-# SSH接続してrun-claude.shを実行（-t でpseudo-ttyを割り当て）
-$EscapedProjectName = Escape-SSHArgument $ProjectName
-$EscapedLinuxBase = Escape-SSHArgument $LinuxBase
-ssh -t -o ControlMaster=no -o ControlPath=none -R "${DevToolsPort}:127.0.0.1:${DevToolsPort}" $LinuxHost "cd $EscapedLinuxBase/$EscapedProjectName && ./run-claude.sh"
+# ============================================================
+# 単一 vs 複数プロジェクト起動分岐
+# ============================================================
+if ($SelectedProjects.Count -gt 1) {
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 複数プロジェクト並列起動
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+    Write-Host "🚀 複数プロジェクト並列起動開始 ($($SelectedProjects.Count)件)" -ForegroundColor Cyan
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+    Write-Host ""
+
+    $Jobs = @()
+    $BrowserProcesses = @()
+
+    foreach ($proj in $SelectedProjects) {
+        $ProjName = $proj.Name
+        $ProjRoot = $proj.FullName
+        $AssignedPort = $ProjectPortMap[$ProjName]
+
+        Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        Write-Host "📦 起動中: $ProjName (ポート: $AssignedPort)"
+
+        # ブラウザ起動（プロジェクト専用プロファイル）
+        if (-not $SkipBrowser) {
+            $BrowserProfile = "C:\DevTools-$SelectedBrowser-$AssignedPort"
+            $StartUrl = "http://localhost:$AssignedPort"
+
+            $browserArgs = @(
+                "--remote-debugging-port=$AssignedPort",
+                "--user-data-dir=`"$BrowserProfile`"",
+                "--no-first-run",
+                "--no-default-browser-check",
+                "--remote-allow-origins=*",
+                $StartUrl
+            )
+
+            $browserProc = Start-Process -FilePath $BrowserExe -ArgumentList $browserArgs -PassThru
+            $BrowserProcesses += $browserProc
+            Write-Host "✅ ブラウザ起動: PID $($browserProc.Id)"
+        } else {
+            Write-Host "  ブラウザ起動: スキップ (CI モード)" -ForegroundColor Yellow
+        }
+
+        # SSH接続（バックグラウンドジョブ）
+        $EscapedProjName = Escape-SSHArgument $ProjName
+        $EscapedLinuxBase = Escape-SSHArgument $LinuxBase
+
+        $Job = Start-Job -ScriptBlock {
+            param($LinuxHost, $ProjectName, $LinuxBase, $Port)
+            ssh -t -o ControlMaster=no -o ControlPath=none -R "${Port}:127.0.0.1:${Port}" $LinuxHost "cd '${LinuxBase}/${ProjectName}' && ./run-claude.sh"
+        } -ArgumentList $LinuxHost, $ProjName, $LinuxBase, $AssignedPort
+
+        $Jobs += @{
+            Job = $Job
+            ProjectName = $ProjName
+            Port = $AssignedPort
+        }
+
+        Write-Host "✅ SSHジョブ開始: Job ID $($Job.Id)"
+        Write-Host ""
+
+        Start-Sleep -Milliseconds 500  # 起動間隔
+    }
+
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Green
+    Write-Host "✅ すべてのプロジェクトを起動しました ($($SelectedProjects.Count)件)" -ForegroundColor Green
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "起動中のプロジェクト:"
+    foreach ($jobInfo in $Jobs) {
+        Write-Host "  - $($jobInfo.ProjectName) (ポート: $($jobInfo.Port), Job ID: $($jobInfo.Job.Id))"
+    }
+
+    Write-Host "`nジョブ管理コマンド:"
+    Write-Host "  Get-Job              : ジョブ一覧表示"
+    Write-Host "  Receive-Job -Id X    : ジョブ出力確認"
+    Write-Host "  Stop-Job -Id X       : ジョブ停止"
+    Write-Host "  Remove-Job -Id X     : ジョブ削除"
+    Write-Host ""
+    Write-Host "Ctrl+C を押すとすべてのジョブを停止します..."
+    Write-Host ""
+
+    # ジョブ終了待機（Ctrl+Cでクリーンアップ）
+    try {
+        Wait-Job -Job ($Jobs | ForEach-Object { $_.Job }) -Timeout 86400  # 24時間
+    } finally {
+        Write-Host "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Yellow
+        Write-Host "🛑 すべてのジョブを停止中..." -ForegroundColor Yellow
+        Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Yellow
+
+        $Jobs | ForEach-Object { Stop-Job -Job $_.Job -ErrorAction SilentlyContinue }
+        $Jobs | ForEach-Object { Remove-Job -Job $_.Job -Force -ErrorAction SilentlyContinue }
+
+        Write-Host "✅ ジョブクリーンアップ完了"
+    }
+} else {
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 単一プロジェクト起動（従来の動作）
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    Write-Host "🚀 Claudeを起動します..."
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    Write-Host ""
+
+    # SSH接続してrun-claude.shを実行（-t でpseudo-ttyを割り当て）
+    $EscapedProjectName = Escape-SSHArgument $ProjectName
+    $EscapedLinuxBase = Escape-SSHArgument $LinuxBase
+    ssh -t -o ControlMaster=no -o ControlPath=none -R "${DevToolsPort}:127.0.0.1:${DevToolsPort}" $LinuxHost "cd $EscapedLinuxBase/$EscapedProjectName && ./run-claude.sh"
+}
+
+# ===== ログ記録終了 =====
+if ($LogPath) {
+    try {
+        Stop-Transcript
+        Write-Host "`n📝 ログ記録終了: $LogPath" -ForegroundColor Gray
+    } catch {
+        # Transcript未開始の場合はエラーを無視
+    }
+}
