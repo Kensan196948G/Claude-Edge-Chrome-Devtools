@@ -1,0 +1,305 @@
+================================================================================
+  Claude-EdgeChromeDevTools トラブルシューティング
+  Troubleshooting
+================================================================================
+
+【よくある問題と解決方法】
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+■問題1: DevTools接続失敗
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【症状】
+  ❌ Microsoft Edge DevTools 接続テスト失敗
+  または
+  ❌ DevTools 応答なし (port=9222)
+
+【原因】
+  - ブラウザが既に起動している
+  - ポートが他のプロセスに使用されている
+  - ファイアウォールがポートをブロックしている
+  - ブラウザの起動が完了していない
+
+【解決方法】
+
+  ▶ 方法1: すべてのブラウザウィンドウを閉じて再実行
+    1. タスクマネージャーを開く（Ctrl+Shift+Esc）
+    2. 「Microsoft Edge」または「Google Chrome」のすべてのプロセスを終了
+    3. スクリプトを再実行
+
+  ▶ 方法2: 手動起動で検証
+    PowerShellで以下を実行:
+
+    # Edge の場合
+    & "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" `
+      --remote-debugging-port=9222 `
+      --user-data-dir="C:\DevTools-edge-9222" `
+      http://localhost:9222
+
+    # Chrome の場合
+    & "C:\Program Files\Google\Chrome\Application\chrome.exe" `
+      --remote-debugging-port=9222 `
+      --user-data-dir="C:\DevTools-chrome-9222" `
+      http://localhost:9222
+
+  ▶ 方法3: エンドポイント確認
+    ブラウザで以下のURLにアクセス:
+    http://localhost:9222/json/version
+
+    正常な応答例:
+    {
+      "Browser": "Chrome/120.0.6099.109",
+      "Protocol-Version": "1.3",
+      "User-Agent": "Mozilla/5.0...",
+      "V8-Version": "12.0.267.8",
+      "WebKit-Version": "537.36",
+      "webSocketDebuggerUrl": "ws://localhost:9222/devtools/browser/..."
+    }
+
+  ▶ 方法4: 別のポートを試す
+    config/config.json で別のポートを優先順位の高い位置に追加
+
+  ▶ 方法5: ファイアウォール設定の確認
+    1. Windows Defender ファイアウォール設定を開く
+    2. 「詳細設定」→「受信の規則」
+    3. ポート9222-9225をTCP/Inboundで許可
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+■問題2: SSH接続エラー
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【症状】
+  Permission denied (publickey)
+  または
+  Connection refused
+  または
+  Host key verification failed
+
+【原因】
+  - SSHキーが設定されていない
+  - ~/.ssh/config に windows-dev が定義されていない
+  - ホストキーが変更された
+
+【解決方法】
+
+  ▶ 方法1: SSH設定の確認
+    ~/.ssh/config を確認（または作成）:
+
+    Host windows-dev
+      HostName 192.168.1.100  # 実際のIPアドレス
+      User your-username
+      IdentityFile ~/.ssh/id_rsa
+      Port 22
+
+  ▶ 方法2: SSHキーの生成と登録
+    # キーペア生成
+    ssh-keygen -t rsa -b 4096 -C "your-email@example.com"
+
+    # 公開鍵をリモートホストにコピー
+    ssh-copy-id windows-dev
+
+    # 接続テスト
+    ssh windows-dev
+
+  ▶ 方法3: ホストキーのリセット
+    ssh-keygen -R windows-dev
+    ssh windows-dev  # 初回接続でyesを入力
+
+  ▶ 方法4: 詳細ログで原因調査
+    ssh -vvv windows-dev
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+■問題3: Statusline未反映
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【症状】
+  Claude Code起動後もStatuslineが表示されない
+  またはデフォルトの表示のまま
+
+【原因】
+  - settings.jsonが読み込まれていない
+  - statusline.shに実行権限がない
+  - jqがインストールされていない
+  - 設定の反映前にClaude Codeが起動した
+
+【解決方法】
+
+  ▶ 方法1: /statusline コマンド実行
+    Claude Code内で以下を実行:
+    /statusline
+
+  ▶ 方法2: Claude Code再起動
+    1. exit でClaude Codeを終了
+    2. スクリプトを再実行
+
+  ▶ 方法3: 実行権限の確認
+    Linux上で:
+    chmod +x ~/.claude/statusline.sh
+    chmod +x /mnt/LinuxHDD/<project>/.claude/statusline.sh
+
+  ▶ 方法4: jqのインストール
+    # Ubuntu/Debian
+    sudo apt-get update
+    sudo apt-get install jq
+
+    # CentOS/RHEL
+    sudo yum install jq
+
+  ▶ 方法5: 手動設定
+    ~/.claude/settings.json を編集:
+    {
+      "statusLine": {
+        "type": "command",
+        "command": "~/.claude/statusline.sh",
+        "padding": 0
+      }
+    }
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+■問題4: 設定ファイルが見つからない
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【症状】
+  ❌ 設定ファイルが見つかりません: config/config.json
+
+【原因】
+  - ファイル構造の整理後、パスが変更された
+  - config.jsonが削除または移動された
+
+【解決方法】
+
+  ▶ 方法1: config.jsonの確認
+    config/config.json が存在することを確認
+
+  ▶ 方法2: config.jsonの再作成
+    以下の内容で config/config.json を作成:
+
+    {
+      "ports": [9222, 9223, 9224, 9225],
+      "zDrive": "Z:\\",
+      "linuxHost": "windows-dev",
+      "linuxBase": "/mnt/LinuxHDD",
+      "edgeExe": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+      "chromeExe": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "defaultBrowser": "edge",
+      "autoCleanup": true,
+      "statusline": { "enabled": true },
+      "claudeCode": {
+        "env": {
+          "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+          "ENABLE_TOOL_SEARCH": "true"
+        },
+        "settings": {
+          "language": "日本語",
+          "outputStyle": "Explanatory"
+        }
+      }
+    }
+
+  ▶ 方法3: スクリプトのパス確認
+    scripts/main/Claude-EdgeDevTools.ps1 の10行目付近を確認:
+    $ConfigPath = Join-Path $RootDir "config\config.json"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+■問題5: プロジェクトが表示されない
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【症状】
+  ❌ Zドライブにプロジェクトが見つかりません
+
+【原因】
+  - Zドライブがマッピングされていない
+  - config.jsonのzDrive設定が間違っている
+  - プロジェクトディレクトリが空
+
+【解決方法】
+
+  ▶ 方法1: Zドライブの確認
+    エクスプローラーでZ:\が存在することを確認
+
+  ▶ 方法2: ネットワークドライブの再マッピング
+    PowerShellで:
+    net use Z: \\server\share /persistent:yes
+
+  ▶ 方法3: config.jsonの修正
+    zDriveを実際のパスに変更:
+    "zDrive": "D:\\Projects\\"
+
+  ▶ 方法4: ディレクトリ構造の確認
+    PowerShellで:
+    Get-ChildItem Z:\ -Directory
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+■問題6: Claude Code起動後すぐに終了する
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【症状】
+  Claude Codeが起動後すぐに終了し、再起動ループに入る
+
+【原因】
+  - claudeコマンドが見つからない
+  - 環境変数が正しく設定されていない
+  - 初期プロンプトにエラーがある
+
+【解決方法】
+
+  ▶ 方法1: claudeコマンドの確認
+    Linux上で:
+    which claude
+    claude --version
+
+  ▶ 方法2: claude CLIのインストール
+    curl -fsSL https://claude.ai/install.sh | sh
+    source ~/.bashrc  # または ~/.zshrc
+
+  ▶ 方法3: 環境変数の確認
+    run-claude.sh 内で:
+    echo "CLAUDE_CHROME_DEBUG_PORT=${CLAUDE_CHROME_DEBUG_PORT}"
+    echo "MCP_CHROME_DEBUG_PORT=${MCP_CHROME_DEBUG_PORT}"
+
+  ▶ 方法4: 手動起動でテスト
+    cd /mnt/LinuxHDD/<project>
+    export CLAUDE_CHROME_DEBUG_PORT=9222
+    export MCP_CHROME_DEBUG_PORT=9222
+    claude --dangerously-skip-permissions
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+■問題7: ポートがすべて使用中
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【症状】
+  ❌ 利用可能なポートがありません。ポート 9222, 9223, 9224, 9225 はすべて使用中です。
+
+【原因】
+  - 複数のブラウザインスタンスが起動している
+  - 他のアプリケーションがポートを使用している
+
+【解決方法】
+
+  ▶ 方法1: 使用中のポートを確認
+    PowerShellで:
+    Get-NetTCPConnection -LocalPort 9222,9223,9224,9225 -State Listen
+
+  ▶ 方法2: プロセスの特定と終了
+    netstat -ano | findstr :9222
+    taskkill /PID <プロセスID> /F
+
+  ▶ 方法3: config.jsonにポートを追加
+    "ports": [9222, 9223, 9224, 9225, 9226, 9227, 9228, 9229, 9230]
+
+【その他のヒント】
+
+■ログの確認
+  - PowerShellの出力を確認
+  - Windows Terminalでログを保存: Ctrl+Shift+S
+
+■バージョン確認
+  - PowerShell: $PSVersionTable.PSVersion
+  - Edge: ヘルプ → Microsoft Edgeについて
+  - Chrome: 設定 → Chromeについて
+  - Claude CLI: claude --version
+
+■サポート
+  - プロジェクトドキュメント: docs/
+  - FAQ: 08_FAQ.txt
+  - Issue報告: プロジェクトリポジトリのIssueセクション

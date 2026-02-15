@@ -1,0 +1,312 @@
+================================================================================
+  Claude-EdgeChromeDevTools 開発ガイド
+  Development Guide
+================================================================================
+
+【開発環境のセットアップ】
+
+■必要なツール
+  - Visual Studio Code（推奨エディタ）
+  - PowerShell 5.1以降
+  - Git（バージョン管理）
+  - Windows Terminal（テスト用）
+
+■推奨VSCode拡張機能
+  - PowerShell（PowerShell言語サポート）
+  - ShellCheck（シェルスクリプトのリンター）
+  - GitLens（Git拡張）
+  - EditorConfig for VS Code（コードスタイル統一）
+
+【プロジェクト構造】
+
+Claude-EdgeChromeDevTools/
+├── scripts/                    # スクリプトディレクトリ
+│   ├── main/                   # メインスクリプト
+│   │   ├── Claude-EdgeDevTools.ps1
+│   │   └── Claude-ChromeDevTools-Final.ps1
+│   ├── setup/                  # セットアップスクリプト
+│   │   ├── setup-windows-terminal.ps1
+│   │   └── setup-windows-terminal.bat
+│   ├── test/                   # テストスクリプト
+│   │   ├── test-edge.ps1
+│   │   └── test-chrome.ps1
+│   └── statusline.sh           # Statusline表示スクリプト
+├── config/                     # 設定ファイル
+│   └── config.json             # 中央集約設定
+├── docs/                       # ドキュメント
+│   ├── 01_プロジェクト概要(Project-Overview).txt
+│   ├── 02_セットアップガイド(Setup-Guide).txt
+│   ├── ...
+├── start.bat                   # エントリーポイント
+├── CLAUDE.md                   # プロジェクト詳細ドキュメント
+├── GEMINI.md                   # プロジェクト概要ドキュメント
+└── README.md                   # （将来作成予定）
+
+【コーディング規約】
+
+■PowerShellスクリプト
+
+  ▶ エラーハンドリング
+    - すべてのスクリプトの冒頭に以下を記述:
+      $ErrorActionPreference = "Stop"
+
+    - Try-Catch-Finallyを適切に使用:
+      try {
+          # リスクのある処理
+      } catch {
+          Write-Error "エラー: $_"
+      }
+
+  ▶ 変数命名規則
+    - PascalCase を使用: $DevToolsPort, $ProjectName
+    - 設定値は大文字スネークケース: $LINUX_HOST
+
+  ▶ コメント
+    - セクションコメント:
+      # ============================================================
+      # ① プロジェクト選択
+      # ============================================================
+
+    - 処理説明コメント:
+      # ポートがリスニング状態か確認
+
+  ▶ 出力メッセージ
+    - 絵文字を使用して視認性向上:
+      Write-Host "✅ 成功しました"
+      Write-Host "❌ エラーが発生しました"
+      Write-Host "⚠️  警告"
+      Write-Host "📦 プロジェクト選択"
+
+    - 区切り線:
+      Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+■Bashスクリプト
+
+  ▶ シバン
+    #!/usr/bin/env bash
+
+  ▶ エラーハンドリング
+    set -euo pipefail
+
+  ▶ 変数命名規則
+    - 大文字スネークケース: PORT, RESTART_DELAY, INIT_PROMPT
+
+  ▶ ファイルエンコーディング
+    - UTF-8 (BOM無し)
+    - LF改行（CRLF不可）
+
+  ▶ INIT_PROMPT定義
+    - heredoc方式を使用（double-quoted stringは禁止）
+    - INIT_PROMPT=$(cat << 'INITPROMPTEOF' ... INITPROMPTEOF)
+    - シングルクォート付きデリミタで変数展開を防止
+
+  ▶ SSH経由のスクリプト転送
+    - base64エンコーディングを使用（直接SSH引数渡しは禁止）
+    - PowerShell側: [Convert]::ToBase64String()
+    - Linux側: echo '$encoded' | base64 -d > /tmp/script.sh
+
+【新機能の追加方法】
+
+■例: 新しいブラウザのサポート追加
+
+  ▶ ステップ1: config.jsonに設定追加
+    {
+      "firefoxExe": "C:\\Program Files\\Mozilla Firefox\\firefox.exe"
+    }
+
+  ▶ ステップ2: メインスクリプトの作成
+    scripts/main/Claude-FirefoxDevTools.ps1
+
+  ▶ ステップ3: start.batにメニュー追加
+    echo  [7] Claude Firefox DevTools Setup
+    ...
+    if "%choice%"=="7" (
+        set "script_name=scripts\main\Claude-FirefoxDevTools.ps1"
+        set "fast_return=1"
+        goto execute
+    )
+
+  ▶ ステップ4: テストスクリプトの作成
+    scripts/test/test-firefox.ps1
+
+  ▶ ステップ5: ドキュメント更新
+    docs/ 内の関連ファイルを更新
+
+【テスト手順】
+
+■ユニットテスト（手動）
+
+  1. 設定ファイルの読み込みテスト
+     - config.jsonの各設定値が正しく読み込まれることを確認
+
+  2. ポート選択ロジックのテスト
+     - 複数ポートが使用中の場合の動作確認
+
+  3. ブラウザ起動テスト
+     - Edge、Chromeそれぞれで正常起動を確認
+
+  4. SSH接続テスト
+     - リモートホストへの接続成功を確認
+
+  5. run-claude.sh生成テスト
+     - 正しい内容で生成されることを確認
+     - エンコーディングがUTF-8 (BOM無し)であることを確認
+     - 改行がLFであることを確認
+     - INIT_PROMPT がheredoc形式で生成されていることを確認
+     - CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 がexportされていることを確認
+
+■統合テスト
+
+  1. エンドツーエンドテスト
+     start.bat → プロジェクト選択 → Claude Code起動までの全フロー
+
+  2. 複数プロジェクト同時実行テスト
+     異なるポートで2つのプロジェクトを同時起動
+
+  3. エラーリカバリーテスト
+     - ブラウザ起動失敗時の動作
+     - SSH接続失敗時の動作
+     - DevTools接続失敗時の動作
+
+【デバッグ方法】
+
+■PowerShellデバッグ
+
+  ▶ 詳細ログ出力
+    $VerbosePreference = "Continue"
+    Write-Verbose "デバッグ情報: $変数"
+
+  ▶ ブレークポイント
+    Set-PSBreakpoint -Script .\scripts\main\Claude-EdgeDevTools.ps1 -Line 100
+
+  ▶ 対話的デバッグ
+    ISE（PowerShell ISE）またはVSCodeのデバッガーを使用
+
+■Bashデバッグ
+
+  ▶ シェルトレース
+    set -x  # デバッグ開始
+    set +x  # デバッグ終了
+
+  ▶ ログ出力
+    echo "DEBUG: 変数の値 = $PORT" >&2
+
+【パフォーマンス最適化】
+
+■起動時間の短縮
+
+  - 不要な処理を削減
+  - 並列処理の活用
+  - キャッシュの利用（ブラウザプロファイル）
+
+■メモリ使用量の削減
+
+  - 変数のクリーンアップ
+  - プロセスの適切な終了
+
+【セキュリティ考慮事項】
+
+■機密情報の取り扱い
+
+  - config.jsonに機密情報（パスワード等）を含めない
+  - SSHキーのパーミッション確認（chmod 600）
+  - .gitignoreで機密ファイルを除外
+
+■コマンドインジェクション対策
+
+  - ユーザー入力の検証
+  - クォート適切な使用
+  - パラメータ化されたコマンド実行
+
+【バージョン管理】
+
+■Git運用
+
+  ▶ ブランチ戦略
+    - main: 安定版
+    - develop: 開発版
+    - feature/*: 新機能開発
+    - bugfix/*: バグ修正
+    - hotfix/*: 緊急修正
+
+  ▶ コミットメッセージ規約
+    [種別] 簡潔な説明
+
+    種別:
+      - feat: 新機能
+      - fix: バグ修正
+      - docs: ドキュメント変更
+      - style: コードスタイル変更
+      - refactor: リファクタリング
+      - test: テスト追加・修正
+      - chore: ビルド・設定変更
+
+    例:
+      [feat] Firefoxサポート追加
+      [fix] ポート選択ロジックのバグ修正
+      [docs] トラブルシューティングガイド更新
+
+  ▶ .gitignoreの設定
+    # 一時ファイル
+    *.tmp
+    *.bak
+
+    # ログファイル
+    *.log
+
+    # ユーザー固有設定
+    config/config.local.json
+
+    # スクリーンショット（テスト用）
+    *.png
+
+【リリース手順】
+
+  1. バージョン番号の更新
+     - docs/01_プロジェクト概要(Project-Overview).txt
+     - docs/09_変更履歴(Changelog).txt
+
+  2. ドキュメントの更新
+     - 新機能の説明を追加
+     - 変更点の記録
+
+  3. テスト実行
+     - 全テストケースの実行
+     - 新環境での動作確認
+
+  4. タグの作成
+     git tag -a v1.0.0 -m "Release version 1.0.0"
+     git push origin v1.0.0
+
+  5. リリースノートの作成
+     - 主要な変更点
+     - 既知の問題
+     - アップグレード手順
+
+【貢献ガイドライン】
+
+■Issue報告
+
+  - 問題の詳細な説明
+  - 再現手順
+  - 環境情報（OS、PowerShellバージョン等）
+  - エラーメッセージ
+
+■Pull Request
+
+  - 明確な説明
+  - テストの実施
+  - ドキュメントの更新
+  - コーディング規約の遵守
+
+【開発者向けリソース】
+
+■参考ドキュメント
+  - PowerShell公式ドキュメント: https://docs.microsoft.com/powershell/
+  - Bash リファレンス: https://www.gnu.org/software/bash/manual/
+  - Chrome DevTools Protocol: https://chromedevtools.github.io/devtools-protocol/
+
+■コミュニティ
+  - GitHub Discussions
+  - Issue Tracker
+  - プロジェクトWiki（今後作成予定）

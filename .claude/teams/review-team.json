@@ -1,0 +1,65 @@
+{
+  "teamName": "multi-review-team",
+  "description": "PR のマルチ観点並列レビューチーム",
+  "version": "1.0.0",
+  "created": "2026-02-15",
+  "members": [
+    {
+      "name": "security-reviewer",
+      "role": "セキュリティレビュー担当",
+      "agentType": "Explore",
+      "focus": [
+        "コマンドインジェクション脆弱性の検出",
+        "機密情報（Token・API Key）の平文検出",
+        "SSH 接続のセキュリティ設定確認",
+        "入力検証の妥当性確認"
+      ],
+      "tools": ["Grep", "Read", "Bash"],
+      "initialPrompt": "このプロジェクト（Claude-EdgeChromeDevTools）の PowerShell スクリプトをセキュリティ観点でレビューしてください。\n\n重点調査項目:\n1. ユーザー入力を受け取る箇所（プロジェクト選択、ブラウザ選択、ポート番号）でのコマンドインジェクションリスク\n2. Escape-SSHArgument 関数の実装と使用箇所の網羅性\n3. config.json 内の機密情報（githubToken, braveApiKey）の保護レベル\n4. SSH 鍵ファイル（~/.ssh/id_ed25519）の権限設定\n\n発見事項は Memory MCP に保存し、リードに報告してください。"
+    },
+    {
+      "name": "performance-reviewer",
+      "role": "パフォーマンスレビュー担当",
+      "agentType": "Explore",
+      "focus": [
+        "SSH 接続回数の最適化",
+        "HTTP リクエストの冗長性削減",
+        "ポーリング処理の効率化",
+        "起動時間のボトルネック特定"
+      ],
+      "tools": ["Grep", "Read", "Bash"],
+      "initialPrompt": "このプロジェクトのスクリプトをパフォーマンス観点でレビューしてください。\n\n重点調査項目:\n1. SSH 接続回数（現在2回: 事前確認1回 + リモート実行1回）の削減可能性\n2. DevTools への HTTP ポーリング（最大15秒待機）の最適化\n3. Base64 エンコード/デコードの頻度と効率\n4. ブラウザ起動からClaude起動までの全体フロー時間\n\nボトルネックを特定し、改善案を Memory MCP に記録してリードに報告してください。"
+    },
+    {
+      "name": "test-reviewer",
+      "role": "テストカバレッジレビュー担当",
+      "agentType": "Explore",
+      "focus": [
+        "エッジケースのテスト網羅性",
+        "異常系テストの不足箇所特定",
+        "テスト自動化の可能性評価"
+      ],
+      "tools": ["Grep", "Read", "Bash"],
+      "initialPrompt": "このプロジェクトのテストカバレッジを分析してください。\n\n重点調査項目:\n1. scripts/test/ 配下のテストスクリプト（test-edge.ps1, test-chrome.ps1, test-devtools-connection.sh）が、メインスクリプトの全機能をカバーしているか\n2. 不足しているテストケース:\n   - ポート競合時の挙動\n   - SSH タイムアウト時の挙動\n   - DevTools 応答なし時の挙動\n   - UNC パスアクセス失敗時のフォールバック\n   - MCP 接続失敗時の継続性\n3. 統合テストの自動化可能性（GitHub Actions 等）\n\nテストギャップを特定し、改善案を Memory MCP に記録してリードに報告してください。"
+    }
+  ],
+  "workflow": {
+    "phase1": "各レビュアーが並列でコードベースを分析（独立したコンテキスト）",
+    "phase2": "発見事項を Memory MCP に保存し、リード（メインエージェント）に報告",
+    "phase3": "リードが統合レポートを作成し、修正優先度を判断"
+  },
+  "usage": {
+    "trigger": "ユーザーが「このPRをレビューしてください」または「コードレビューをお願いします」と指示",
+    "command": "TeamCreate を使用してチームを作成し、3名のレビュアーを並列起動",
+    "example": "TeamCreate -team_name 'review-pr-123' -description 'PR #123 のマルチ観点レビュー'\nTask -subagent_type Explore -team_name 'review-pr-123' -name 'security-reviewer' -prompt '(review-team.jsonのpromptを使用)'\nTask -subagent_type Explore -team_name 'review-pr-123' -name 'performance-reviewer' -prompt '(同上)'\nTask -subagent_type Explore -team_name 'review-pr-123' -name 'test-reviewer' -prompt '(同上)'"
+  },
+  "expectedOutput": {
+    "format": "統合レポート (Markdown)",
+    "sections": [
+      "セキュリティ観点の発見事項（重大度: 高・中・低）",
+      "パフォーマンス観点の発見事項（改善効果: 大・中・小）",
+      "テストカバレッジ観点の発見事項（リスク: 高・中・低）",
+      "推奨アクション（優先度順）"
+    ]
+  }
+}

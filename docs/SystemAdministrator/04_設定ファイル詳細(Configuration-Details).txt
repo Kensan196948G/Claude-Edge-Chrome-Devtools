@@ -1,0 +1,281 @@
+================================================================================
+  Claude-EdgeChromeDevTools 設定ファイル詳細
+  Configuration Details
+================================================================================
+
+【config.json 完全リファレンス】
+
+■ファイルパス
+  config/config.json
+
+■エンコーディング
+  UTF-8 (BOM無し)
+
+■JSON構造
+
+{
+  "zDrive": "Z:\\",
+  "linuxHost": "windows-dev",
+  "linuxBase": "/mnt/LinuxHDD",
+  "ports": [9222, 9223, 9224, 9225],
+  "edgeExe": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+  "chromeExe": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+  "defaultBrowser": "edge",
+  "autoCleanup": true,
+  "statusline": {
+    "enabled": true
+  },
+  "claudeCode": {
+    "env": {
+      "ENABLE_TOOL_SEARCH": "true",
+      "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+      "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "50",
+      "CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION": "true"
+    },
+    "settings": {
+      "language": "日本語",
+      "outputStyle": "Explanatory",
+      "alwaysThinkingEnabled": true,
+      "spinnerTipsEnabled": true,
+      "prefersReducedMotion": false,
+      "promptSuggestionEnabled": true,
+      "respectGitignore": true,
+      "autoUpdatesChannel": "latest",
+      "includeCoAuthoredBy": true
+    }
+  }
+}
+
+■各設定項目の詳細
+
+┌─────────────────────────────────────────────────────────────
+│ zDrive
+├─────────────────────────────────────────────────────────────
+│ 型: String
+│ 説明: Windowsマシンでのプロジェクトルートディレクトリ
+│ デフォルト: "Z:\\"
+│ 例:
+│   "zDrive": "Z:\\"
+│   "zDrive": "D:\\Projects\\"
+│   "zDrive": "C:\\Users\\username\\workspace\\"
+│
+│ 注意事項:
+│   - バックスラッシュは2重にエスケープ (\\)
+│   - 末尾のバックスラッシュを忘れずに
+│   - ネットワークドライブも指定可能
+└─────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────────────────────────────
+│ linuxHost
+├─────────────────────────────────────────────────────────────
+│ 型: String
+│ 説明: SSH接続先のLinuxホスト名（~/.ssh/configで定義）
+│ デフォルト: "windows-dev"
+│ 例:
+│   "linuxHost": "windows-dev"
+│   "linuxHost": "dev-server"
+│   "linuxHost": "192.168.1.100"
+│   "linuxHost": "user@example.com"
+│
+│ 注意事項:
+│   - SSHキーベース認証が設定済みであること
+│   - ~/.ssh/config に対応するHost定義が必要
+└─────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────────────────────────────
+│ linuxBase
+├─────────────────────────────────────────────────────────────
+│ 型: String
+│ 説明: Linuxホスト上のプロジェクトベースパス
+│ デフォルト: "/mnt/LinuxHDD"
+│ 例:
+│   "linuxBase": "/mnt/LinuxHDD"
+│   "linuxBase": "/home/user/projects"
+│   "linuxBase": "/workspace"
+│
+│ 注意事項:
+│   - zDriveとlinuxBaseは同じ内容をマウントしている前提
+│   - 例: Z:\ ⟺ /mnt/LinuxHDD
+└─────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────────────────────────────
+│ ports
+├─────────────────────────────────────────────────────────────
+│ 型: Array<Number>
+│ 説明: 使用可能なDevToolsポートのリスト
+│ デフォルト: [9222, 9223, 9224, 9225]
+│ 例:
+│   "ports": [9222, 9223, 9224, 9225]
+│   "ports": [9222, 9223, 9224, 9225, 9226, 9227, 9228, 9229, 9230]
+│   "ports": [10000, 10001, 10002]
+│
+│ 注意事項:
+│   - スクリプトは配列の先頭から順に利用可能なポートを検索
+│   - ファイアウォールで許可されているポートを使用
+│   - 複数プロジェクト同時実行の場合は十分な数を用意
+│   - 一般的な範囲: 9222-9230, 10000-10100
+└─────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────────────────────────────
+│ edgeExe
+├─────────────────────────────────────────────────────────────
+│ 型: String
+│ 説明: Microsoft Edge実行ファイルのフルパス
+│ デフォルト: "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"
+│ 例:
+│   "edgeExe": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"
+│   "edgeExe": "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe"
+│
+│ 注意事項:
+│   - バックスラッシュは2重にエスケープ
+│   - 標準インストール先と異なる場合は変更必須
+│   - 64bit版の場合は "Program Files" になる可能性あり
+└─────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────────────────────────────
+│ chromeExe
+├─────────────────────────────────────────────────────────────
+│ 型: String
+│ 説明: Google Chrome実行ファイルのフルパス
+│ デフォルト: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+│ 例:
+│   "chromeExe": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+│   "chromeExe": "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
+│
+│ 注意事項:
+│   - バックスラッシュは2重にエスケープ
+│   - Chromium系ブラウザ（Brave, Edge等）も動作する可能性あり
+└─────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────────────────────────────
+│ statusline
+├─────────────────────────────────────────────────────────────
+│ 型: Object
+│ 説明: Statusline機能の設定
+│ デフォルト: { "enabled": true }
+│ 例:
+│   "statusline": {
+│     "enabled": true
+│   }
+│   "statusline": {
+│     "enabled": false
+│   }
+│
+│ プロパティ:
+│   - enabled (Boolean): Statusline機能の有効/無効
+│
+│ 注意事項:
+│   - falseにするとstatusline.shのコピーとsettings.json生成をスキップ
+│   - jqがインストールされていない環境では自動インストールを試行
+└─────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────────────────────────────
+│ defaultBrowser
+├─────────────────────────────────────────────────────────────
+│ 型: String
+│ 説明: デフォルトで使用するブラウザの指定
+│ デフォルト: "edge"
+│ 値: "edge" または "chrome"
+│ 例:
+│   "defaultBrowser": "edge"
+│   "defaultBrowser": "chrome"
+│
+│ 注意事項:
+│   - ブラウザ選択UIでのデフォルト選択に影響
+│   - 指定されたブラウザがインストールされていない場合はエラー
+└─────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────────────────────────────
+│ autoCleanup
+├─────────────────────────────────────────────────────────────
+│ 型: Boolean
+│ 説明: スクリプト終了時の自動クリーンアップの有効/無効
+│ デフォルト: true
+│ 例:
+│   "autoCleanup": true
+│   "autoCleanup": false
+│
+│ 注意事項:
+│   - trueの場合、スクリプト終了時に残存プロセスとポートを自動的に解放
+│   - falseの場合、手動でのクリーンアップが必要
+└─────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────────────────────────────
+│ claudeCode
+├─────────────────────────────────────────────────────────────
+│ 型: Object
+│ 説明: Claude Code設定の中央管理セクション
+│
+│ サブプロパティ:
+│   - env (Object): 環境変数の設定
+│     - ENABLE_TOOL_SEARCH: MCP Tool Search有効化 ("true")
+│     - CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS: Agent Teams有効化 ("1")
+│     - CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: 自動コンパクト閾値 ("50")
+│     - CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION: プロンプトサジェスション ("true")
+│   - settings (Object): Claude Code UI/動作設定
+│     - language: 表示言語 ("日本語")
+│     - outputStyle: 出力スタイル ("Explanatory")
+│     - alwaysThinkingEnabled: 思考モード常時有効 (true)
+│     - spinnerTipsEnabled: スピナーTips表示 (true)
+│     - prefersReducedMotion: モーション軽減 (false)
+│     - promptSuggestionEnabled: プロンプトサジェスション (true)
+│     - respectGitignore: .gitignore尊重 (true)
+│     - autoUpdatesChannel: 自動更新チャンネル ("latest")
+│     - includeCoAuthoredBy: Co-Authored-By追加 (true)
+│
+│ 注意事項:
+│   - この設定はスクリプト実行時にLinux側 ~/.claude/settings.json へ
+│     jqマージパターンで自動適用される
+│   - 既存のpermissions, plugins, hooksは保持される
+└─────────────────────────────────────────────────────────────
+
+【設定変更時の注意事項】
+
+■ファイル保存時
+  1. エンコーディングをUTF-8 (BOM無し)で保存
+  2. JSONの構文エラーがないか確認
+  3. バックスラッシュのエスケープ忘れに注意
+
+■変更の反映
+  - config.jsonの変更は次回スクリプト実行時に自動反映
+  - 既に起動中のセッションには影響しない
+
+■バックアップ推奨
+  - 変更前にconfig.jsonのバックアップを作成
+  - 例: config.json.bak
+
+【高度な設定例】
+
+■複数ポートを用意して同時実行を可能にする
+
+{
+  "ports": [9222, 9223, 9224, 9225, 9226, 9227, 9228, 9229, 9230]
+}
+
+■カスタムプロジェクトパスを使用
+
+{
+  "zDrive": "D:\\DevProjects\\",
+  "linuxBase": "/home/user/dev-projects"
+}
+
+■Statusline機能を無効化
+
+{
+  "statusline": {
+    "enabled": false
+  }
+}
+
+【関連ファイル】
+
+■.claude/settings.json（動的生成）
+  プロジェクトごとのClaude Code設定ファイル
+  - Statusline設定
+  - その他のClaude Code設定
+
+■.claude/statusline.sh（動的コピー）
+  プロジェクトごとのStatusline表示スクリプト
+
+【トラブルシューティング】
+  設定ファイルに関する問題は、05_トラブルシューティング(Troubleshooting).txt を参照

@@ -1,0 +1,88 @@
+================================================================================
+  Claude-EdgeChromeDevTools プロジェクト概要
+  Project Overview
+================================================================================
+
+【プロジェクト名】
+  Claude-EdgeChromeDevTools
+
+【バージョン】
+  1.1.0
+
+【概要】
+  このプロジェクトは、WindowsマシンとリモートLinuxホスト間でClaude Codeと
+  ブラウザ開発者ツール(DevTools)を統合するためのセットアップ自動化スクリプト群です。
+  SSH経由でのリモートポートフォワーディングを使用し、Windows上のEdge/Chrome
+  ブラウザとLinux上のClaude Codeを連携させます。
+
+【目的】
+  - Claude Code開発環境の迅速なセットアップ
+  - ブラウザDevToolsとの統合による高度なデバッグ環境の提供
+  - リモート開発環境の自動構成
+  - プロジェクト間の簡単な切り替え
+
+【主要機能】
+  1. プロジェクト選択
+     - Zドライブのディレクトリから対話的に選択
+     - 複数プロジェクトの管理が容易
+
+  2. ポート自動割り当て
+     - config.jsonのports配列から利用可能なポートを検索
+     - ポート衝突の自動検出と回避
+
+  3. ブラウザ起動
+     - 専用プロファイル + リモートデバッグモードでEdge/Chromeを起動
+     - DevTools Preferences事前設定（Edge版）
+
+  4. run-claude.sh動的生成
+     - 選択されたプロジェクトルートにbashスクリプトを動的生成
+     - 初期プロンプトの自動入力機能
+
+  5. SSHリモート実行
+     - ポートフォワーディング付きSSH接続
+     - Linux上のClaude Codeを自動起動
+
+  6. Statusline設定
+     - カレントディレクトリ、Gitブランチ、モデル名などを表示
+     - プログレスバー付きコンテキスト使用率表示
+
+  7. Claude Code設定の中央管理
+     - config.jsonのclaudeCodeセクションで環境変数・設定を一元管理
+     - スクリプト実行時にLinux側へ自動適用
+
+  8. Agent Teams機能統合
+     - 並列作業オーケストレーションの環境変数自動設定
+     - Team Lead, Teammates, Task List, Mailboxコンポーネント
+
+【対象ユーザー】
+  - Claude Codeを使用する開発者
+  - リモート開発環境を構築したいユーザー
+  - ブラウザDevToolsとの統合を必要とするプロジェクト開発者
+
+【システム要件】
+  Windows側:
+    - Windows 10/11
+    - PowerShell 5.1以降
+    - Microsoft Edge または Google Chrome
+    - SSH クライアント (OpenSSH)
+    - Windows Terminal (推奨)
+
+  Linux側:
+    - claude CLI
+    - curl
+    - jq (Statusline用、自動インストール試行)
+    - fuser (ポートクリーンアップ用)
+    - git (Statusline Gitブランチ表示用)
+
+【ライセンス】
+  MIT License（詳細は10_ライセンス(License).txtを参照）
+
+【関連リンク】
+  - Claude Code: https://claude.ai/code
+  - プロジェクトドキュメント: ./docs/
+
+【作成日】
+  2025-01-30
+
+【最終更新日】
+  2026-02-06

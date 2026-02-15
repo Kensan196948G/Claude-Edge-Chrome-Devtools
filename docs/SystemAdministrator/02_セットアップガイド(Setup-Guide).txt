@@ -1,0 +1,144 @@
+================================================================================
+  Claude-EdgeChromeDevTools セットアップガイド
+  Setup Guide
+================================================================================
+
+【初期セットアップ】
+
+■ステップ1: 前提条件の確認
+
+  1. Zドライブのマッピング
+     - Windowsマシンにプロジェクトディレクトリを含むZドライブがマッピングされている
+     - 例: Z:\ → \\server\share または Linux /mnt/LinuxHDD
+
+  2. SSH設定
+     - windows-dev ホストへのSSHキーベース認証が構成済み
+     - ~/.ssh/config でホスト設定を確認:
+
+       Host windows-dev
+         HostName <IPアドレスまたはホスト名>
+         User <ユーザー名>
+         IdentityFile ~/.ssh/id_rsa
+
+  3. ブラウザのインストール
+     - Microsoft Edge: C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
+     - Google Chrome: C:\Program Files\Google\Chrome\Application\chrome.exe
+     - ※ カスタムパスの場合はconfig.jsonで設定
+
+  4. Linux側の準備
+     - claude CLIのインストール
+       curl -fsSL https://claude.ai/install.sh | sh
+     - 必要なツールのインストール
+       sudo apt-get install curl jq fuser git
+
+■ステップ2: プロジェクトのダウンロード
+
+  1. リポジトリのクローン（またはダウンロード）
+     git clone <repository-url> D:\Claude-EdgeChromeDevTools
+     cd D:\Claude-EdgeChromeDevTools
+
+  2. ディレクトリ構造の確認
+     Claude-EdgeChromeDevTools/
+     ├── scripts/
+     │   ├── main/          # メインスクリプト
+     │   ├── setup/         # セットアップスクリプト
+     │   ├── test/          # テストスクリプト
+     │   └── statusline.sh
+     ├── config/
+     │   └── config.json
+     ├── docs/
+     ├── start.bat
+     ├── CLAUDE.md
+     └── GEMINI.md
+
+■ステップ3: 設定ファイルのカスタマイズ
+
+  1. config/config.json を開く
+
+  2. 環境に合わせて編集:
+     {
+       "zDrive": "Z:\\",                    // Windowsプロジェクトルート
+       "linuxHost": "windows-dev",          // SSHホスト名
+       "linuxBase": "/mnt/LinuxHDD",        // Linuxプロジェクトベースパス
+       "ports": [9222, 9223, 9224, 9225],   // 使用可能なDevToolsポート
+       "edgeExe": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+       "chromeExe": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+       "defaultBrowser": "edge",            // デフォルトブラウザ
+       "autoCleanup": true,                 // 自動クリーンアップ
+       "statusline": {
+         "enabled": true,
+         "showDirectory": true,
+         "showGitBranch": true,
+         "showModel": true,
+         "showClaudeVersion": true,
+         "showOutputStyle": true,
+         "showContext": true
+       },
+       "claudeCode": {                      // Claude Code設定の中央管理
+         "env": {
+           "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+           "ENABLE_TOOL_SEARCH": "true",
+           "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "50",
+           "CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION": "true"
+         },
+         "settings": {
+           "language": "日本語",
+           "outputStyle": "Explanatory",
+           "alwaysThinkingEnabled": true
+         }
+       }
+     }
+
+  3. 保存してエンコーディングがUTF-8 (BOM無し)であることを確認
+
+■ステップ4: Windows Terminalの設定（推奨）
+
+  1. Windows Terminalのインストール
+     - Microsoft Storeから「Windows Terminal」をインストール
+     - またはコマンド: winget install Microsoft.WindowsTerminal
+
+  2. 自動設定スクリプトの実行
+     start.bat を起動 → [6] Auto-Configure Windows Terminal を選択
+
+     または直接実行:
+     powershell -ExecutionPolicy Bypass -File scripts\setup\setup-windows-terminal.ps1
+
+  3. 設定内容
+     - プロファイル名: Claude DevTools
+     - フォント: Cascadia Code (Size 18)
+     - カラーテーマ: One Half Light (Bright)
+     - 背景透明度: 95%
+     - カーソル: バー（白）
+
+■ステップ5: 初回実行テスト
+
+  1. start.bat をダブルクリック（またはWindows Terminalから実行）
+
+  2. メニューから [3] Edge DevTools Connection Test を選択
+
+  3. 接続テストが成功することを確認:
+     ✅ DevTools接続テスト成功!
+     - DevToolsポート: 9222 (リスニング中)
+     - エンドポイント: http://localhost:9222/json/version
+
+  4. Chromeの場合も同様に [4] Chrome DevTools Connection Test を実行
+
+■ステップ6: メインスクリプトの実行
+
+  1. start.bat から [1] Claude Edge DevTools Setup を選択
+     （またはメニューから [2] Claude Chrome DevTools Setup）
+
+  2. プロジェクト選択画面が表示されるので、対象プロジェクトの番号を入力
+
+  3. ブラウザが自動起動し、DevToolsポートがリスニング開始
+
+  4. Linux上でClaude Codeが自動起動
+
+  5. 初期プロンプトが自動入力され、セッション開始
+
+【トラブルシューティング】
+  問題が発生した場合は、05_トラブルシューティング(Troubleshooting).txt を参照
+
+【次のステップ】
+  - 03_使用方法(Usage-Guide).txt でコマンドの詳細を確認
+  - 04_設定ファイル詳細(Configuration-Details).txt で高度な設定を学習

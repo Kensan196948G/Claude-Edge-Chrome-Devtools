@@ -1,0 +1,81 @@
+# ============================================================
+# Claude-EdgeChromeDevTools .gitignore
+# ============================================================
+
+# 機密情報（絶対にコミットしない）
+config/config.json
+config/config.local.json
+*.key
+*.pem
+id_rsa*
+id_ed25519*
+*.secret
+
+# 環境固有の設定（オプション - コミットするかはチーム判断）
+# config/config.json の githubToken, braveApiKey がコミットされるのを防ぐ場合:
+# config/config.json
+
+# Windows 一時ファイル
+Thumbs.db
+desktop.ini
+*.lnk
+
+# PowerShell
+*.ps1~
+*.psm1~
+
+# ブラウザプロファイル（大容量・不要）
+C:/DevTools-*
+DevTools-edge-*
+DevTools-chrome-*
+
+# SSH 一時ファイル
+*.ssh/known_hosts.old
+*.ssh/config.bak
+
+# Claude Code ローカルファイル
+.claude/logs/
+.claude/memory/project-context.json
+.mcp.json.bak.*
+.mcp.json.backup.*
+
+# バックアップファイル
+*.bak
+*.backup
+*~
+
+# ログファイル
+*.log
+*.jsonl
+
+# OS 固有
+.DS_Store
+*.swp
+*.swo
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# Node.js (MCP 関連)
+node_modules/
+package-lock.json
+npm-debug.log*
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.venv/
+
+# テスト出力
+test-results/
+coverage/
+*.test.log
+
+# 一時ファイル
+tmp/
+temp/
+*.tmp

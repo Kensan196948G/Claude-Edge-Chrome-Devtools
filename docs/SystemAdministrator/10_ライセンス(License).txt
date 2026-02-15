@@ -1,0 +1,161 @@
+================================================================================
+  Claude-EdgeChromeDevTools ライセンス
+  License
+================================================================================
+
+MIT License
+
+Copyright (c) 2025 Claude-EdgeChromeDevTools Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+────────────────────────────────────────────────────────────────────────────
+
+【日本語訳】（参考：法的拘束力は英語版のみ）
+
+MITライセンス
+
+Copyright (c) 2025 Claude-EdgeChromeDevTools Contributors
+
+以下に定める条件に従い、本ソフトウェアおよび関連文書のファイル
+（以下「ソフトウェア」）の複製を取得するすべての人に対し、ソフトウェアを
+無制限に扱うことを無償で許可します。これには、ソフトウェアの複製を使用、
+複写、変更、結合、掲載、頒布、サブライセンス、および/または販売する権利、
+およびソフトウェアを提供する相手に同じことを許可する権利も無制限に含まれます。
+
+上記の著作権表示および本許諾表示を、ソフトウェアのすべての複製または
+重要な部分に記載するものとします。
+
+ソフトウェアは「現状のまま」で、明示であるか暗黙であるかを問わず、
+何らの保証もなく提供されます。ここでいう保証とは、商品性、特定の目的への
+適合性、および権利非侵害についての保証も含みますが、それに限定されるものでは
+ありません。作者または著作権者は、契約行為、不法行為、またはそれ以外であろうと、
+ソフトウェアに起因または関連し、あるいはソフトウェアの使用またはその他の
+扱いによって生じる一切の請求、損害、その他の義務について何らの責任も負わない
+ものとします。
+
+────────────────────────────────────────────────────────────────────────────
+
+【ライセンスの意味】
+
+■許可されること
+  ✅ 商用利用: このソフトウェアを商用プロジェクトで使用できます
+  ✅ 修正: ソースコードを自由に変更できます
+  ✅ 配布: 改変版を含めて自由に配布できます
+  ✅ 私的使用: 個人的なプロジェクトで自由に使用できます
+  ✅ サブライセンス: 独自のライセンス条件で再配布できます
+
+■条件
+  ⚠️  ライセンス表記: すべての複製にMITライセンスの全文を含める必要があります
+  ⚠️  著作権表記: 著作権表示を保持する必要があります
+
+■免責事項
+  ❌ 保証なし: ソフトウェアは「現状のまま」提供され、いかなる保証もありません
+  ❌ 責任なし: 作者は損害について一切の責任を負いません
+
+────────────────────────────────────────────────────────────────────────────
+
+【第三者ライセンス】
+
+本ソフトウェアは以下のオープンソースソフトウェア/ツールを使用しています：
+
+■ PowerShell
+  - ライセンス: MIT License
+  - URL: https://github.com/PowerShell/PowerShell
+
+■ Claude Code CLI
+  - 提供元: Anthropic
+  - URL: https://claude.ai/code
+  - ライセンス: Anthropic利用規約に従う
+
+■ Microsoft Edge
+  - 提供元: Microsoft Corporation
+  - ライセンス: Microsoft Software License Terms
+
+■ Google Chrome
+  - 提供元: Google LLC
+  - ライセンス: Google Chrome利用規約
+
+■ jq（JSON処理）
+  - ライセンス: MIT License
+  - URL: https://github.com/stedolan/jq
+
+■ OpenSSH
+  - ライセンス: BSD License
+  - URL: https://www.openssh.com/
+
+これらのツール/ソフトウェアは、それぞれのライセンス条項に従って使用されています。
+
+────────────────────────────────────────────────────────────────────────────
+
+【商標について】
+
+- "Claude" および関連する商標は Anthropic, PBC の商標または登録商標です
+- "Microsoft Edge" は Microsoft Corporation の商標または登録商標です
+- "Google Chrome" は Google LLC の商標または登録商標です
+- "Windows" は Microsoft Corporation の商標または登録商標です
+
+本ソフトウェアはこれらの企業と公式に提携しているわけではありません。
+
+────────────────────────────────────────────────────────────────────────────
+
+【プライバシーポリシー】
+
+本ソフトウェアは：
+  - ユーザーデータを収集しません
+  - 外部サーバーにデータを送信しません（Claude Code自体の通信を除く）
+  - トラッキングやアナリティクスを行いません
+  - ローカル環境でのみ動作します
+
+ただし、以下の点にご注意ください：
+  - Claude Codeの使用にはAnthropic利用規約が適用されます
+  - SSH接続はユーザーが設定したリモートホストに対して行われます
+  - ブラウザの使用には各ブラウザのプライバシーポリシーが適用されます
+
+────────────────────────────────────────────────────────────────────────────
+
+【セキュリティポリシー】
+
+■脆弱性の報告
+  セキュリティ上の問題を発見した場合は、公開のIssueではなく、
+  プロジェクトメンテナーに直接連絡してください。
+
+■セキュリティに関する注意事項
+  - --dangerously-skip-permissions フラグは開発環境でのみ使用してください
+  - 本番環境や信頼できないコードでの使用は推奨されません
+  - SSHキーは適切に管理し、不正アクセスを防いでください
+  - config.jsonに機密情報（パスワードなど）を含めないでください
+
+────────────────────────────────────────────────────────────────────────────
+
+【貢献ライセンス】
+
+本プロジェクトに貢献（Pull Request、Issue報告など）を行う場合、
+あなたの貢献はMITライセンスの下で提供されることに同意したものとみなされます。
+
+────────────────────────────────────────────────────────────────────────────
+
+【お問い合わせ】
+
+ライセンスに関する質問がある場合は、プロジェクトリポジトリのIssueまたは
+Discussionsでお問い合わせください。
+
+────────────────────────────────────────────────────────────────────────────
+
+最終更新日: 2026-02-06

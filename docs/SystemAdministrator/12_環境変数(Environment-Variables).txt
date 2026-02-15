@@ -1,0 +1,558 @@
+================================================================================
+  Claude-EdgeChromeDevTools 環境変数
+  Environment Variables
+================================================================================
+
+【環境変数一覧】
+
+このドキュメントでは、Claude-EdgeChromeDevToolsプロジェクトで使用される
+すべての環境変数について説明します。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+■ Linux側環境変数（run-claude.sh で設定）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+▶ CLAUDE_CHROME_DEBUG_PORT
+
+【説明】
+  Claude CodeがChrome DevToolsプロトコルに接続するためのポート番号を指定します。
+
+【設定場所】
+  run-claude.sh（動的生成）
+
+【設定タイミング】
+  Claude Code起動前
+
+【値】
+  DevToolsポート番号（例: 9222, 9223, 9224, 9225）
+
+【設定方法】
+  export CLAUDE_CHROME_DEBUG_PORT=${PORT}
+
+【用途】
+  - Claude CodeがブラウザDevToolsに接続
+  - ブラウザ自動化
+  - デバッグ情報の取得
+
+【例】
+  export CLAUDE_CHROME_DEBUG_PORT=9222
+  claude --dangerously-skip-permissions
+
+【確認方法】
+  echo $CLAUDE_CHROME_DEBUG_PORT
+
+─────────────────────────────────────────────────────────────
+
+▶ MCP_CHROME_DEBUG_PORT
+
+【説明】
+  MCPサーバー（Model Context Protocol）がChrome DevToolsに接続するための
+  ポート番号を指定します。
+
+【設定場所】
+  run-claude.sh（動的生成）
+
+【設定タイミング】
+  Claude Code起動前
+
+【値】
+  DevToolsポート番号（通常はCLAUDE_CHROME_DEBUG_PORTと同じ）
+
+【設定方法】
+  export MCP_CHROME_DEBUG_PORT=${PORT}
+
+【用途】
+  - MCPサーバーのブラウザDevTools統合
+  - ブラウザ操作のMCP経由実行
+
+【例】
+  export MCP_CHROME_DEBUG_PORT=9222
+
+【確認方法】
+  echo $MCP_CHROME_DEBUG_PORT
+
+─────────────────────────────────────────────────────────────
+
+▶ CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS
+
+【説明】
+  Claude CodeのAgent Teams機能を有効化します。
+  Team Lead, Teammates, Task List, Mailboxコンポーネントを使用した
+  並列作業オーケストレーションが可能になります。
+
+【設定場所】
+  run-claude.sh（動的生成）
+  config.json の claudeCode.env セクション
+
+【設定タイミング】
+  Claude Code起動前
+
+【値】
+  1（有効）/ 未設定（無効）
+
+【設定方法】
+  export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+
+【用途】
+  - 複数のClaude Codeインスタンスによるチーム作業
+  - タスクリストの共有と並列実行
+  - エージェント間メッセージング
+
+【例】
+  export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+  claude --dangerously-skip-permissions
+
+【確認方法】
+  echo $CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS
+
+─────────────────────────────────────────────────────────────
+
+▶ ENABLE_TOOL_SEARCH
+
+【説明】
+  MCP Tool Search機能を有効化します。
+  利用可能なMCPツールを検索・発見できるようになります。
+
+【設定場所】
+  config.json の claudeCode.env セクション
+
+【値】
+  "true"（有効）/ "false"（無効）
+
+【設定方法】
+  export ENABLE_TOOL_SEARCH=true
+
+─────────────────────────────────────────────────────────────
+
+▶ CLAUDE_AUTOCOMPACT_PCT_OVERRIDE
+
+【説明】
+  コンテキストウィンドウの自動コンパクト（圧縮）閾値を設定します。
+  指定したパーセンテージに達すると自動的にコンテキストを圧縮します。
+
+【設定場所】
+  config.json の claudeCode.env セクション
+
+【値】
+  パーセンテージ文字列（例: "50"）
+
+【設定方法】
+  export CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=50
+
+─────────────────────────────────────────────────────────────
+
+▶ CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION
+
+【説明】
+  Claude Codeのプロンプトサジェスション機能を有効化します。
+  次のプロンプトの候補を自動的に提案してくれます。
+
+【設定場所】
+  config.json の claudeCode.env セクション
+
+【値】
+  "true"（有効）/ "false"（無効）
+
+【設定方法】
+  export CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=true
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+■ run-claude.sh内部変数（環境変数ではない）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+▶ PORT
+
+【説明】
+  DevToolsポート番号を保持します。
+
+【設定場所】
+  run-claude.sh（動的生成時に __DEVTOOLS_PORT__ が置換される）
+
+【値】
+  9222-9225 の範囲（config.jsonで定義）
+
+【設定方法】
+  PORT=__DEVTOOLS_PORT__  # PowerShellスクリプトで置換
+
+【例】
+  PORT=9222
+
+─────────────────────────────────────────────────────────────
+
+▶ RESTART_DELAY
+
+【説明】
+  Claude Code異常終了時の再起動までの遅延秒数を指定します。
+
+【設定場所】
+  run-claude.sh
+
+【デフォルト値】
+  3（秒）
+
+【設定方法】
+  RESTART_DELAY=3
+
+【カスタマイズ】
+  run-claude.sh生成部分を編集して変更可能
+
+【例】
+  RESTART_DELAY=5  # 5秒待機
+
+─────────────────────────────────────────────────────────────
+
+▶ INIT_PROMPT
+
+【説明】
+  Claude Code起動時に自動入力される初期プロンプト文字列です。
+
+【設定場所】
+  run-claude.sh（PowerShellスクリプトから動的生成）
+
+【デフォルト値】
+  "以降、日本語で対応してください。
+
+  あなたはこのリポジトリのメイン開発エージェントです。
+  GitHub（リモート origin）および GitHub Actions 上の自動実行と整合が取れる形で、
+  ローカル開発作業を支援してください。
+  ..."
+
+【設定方法】
+  INIT_PROMPT=$(cat << 'INITPROMPTEOF'
+  初期プロンプト文字列
+  INITPROMPTEOF
+  )
+
+【カスタマイズ】
+  scripts/main/Claude-EdgeDevTools.ps1 または
+  scripts/main/Claude-ChromeDevTools-Final.ps1 の
+  296行目付近を編集
+
+【使用方法】
+  echo "$INIT_PROMPT" | claude --dangerously-skip-permissions
+
+  注意: heredoc方式（'INITPROMPTEOF'をシングルクォートで囲む）を使用する
+  ことで、bash変数展開やバッククォートのコマンド置換を防止しています。
+  これにより、プロンプト文字列内の特殊文字が安全に保持されます。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+■ PowerShell変数（スクリプト内部）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+▶ $ErrorActionPreference
+
+【説明】
+  PowerShellのエラー処理動作を制御します。
+
+【設定値】
+  "Stop"
+
+【効果】
+  コマンドエラー発生時、スクリプトを即座に停止
+
+【設定場所】
+  すべてのPowerShellスクリプトの冒頭
+
+【例】
+  $ErrorActionPreference = "Stop"
+
+─────────────────────────────────────────────────────────────
+
+▶ $RootDir
+
+【説明】
+  プロジェクトのルートディレクトリパスを保持します。
+
+【設定方法】
+  $RootDir = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+
+【値の例】
+  D:\Claude-EdgeChromeDevTools
+
+【用途】
+  config.jsonやstatusline.shの相対パス解決
+
+─────────────────────────────────────────────────────────────
+
+▶ $ConfigPath
+
+【説明】
+  config.jsonのフルパスを保持します。
+
+【設定方法】
+  $ConfigPath = Join-Path $RootDir "config\config.json"
+
+【値の例】
+  D:\Claude-EdgeChromeDevTools\config\config.json
+
+─────────────────────────────────────────────────────────────
+
+▶ $DevToolsPort
+
+【説明】
+  自動選択されたDevToolsポート番号を保持します。
+
+【設定方法】
+  $DevToolsPort = Get-AvailablePort -Ports $AvailablePorts
+
+【値の例】
+  9222, 9223, 9224, 9225
+
+【用途】
+  - ブラウザ起動オプション
+  - SSH リモートポートフォワーディング
+  - run-claude.sh生成時の置換
+
+─────────────────────────────────────────────────────────────
+
+▶ $ZRoot
+
+【説明】
+  Windowsマシンのプロジェクトルートディレクトリ（通常はZドライブ）
+
+【設定方法】
+  $ZRoot = $Config.zDrive
+
+【値の例】
+  Z:\
+
+【用途】
+  プロジェクトディレクトリの列挙
+
+─────────────────────────────────────────────────────────────
+
+▶ $LinuxHost
+
+【説明】
+  SSH接続先のLinuxホスト名
+
+【設定方法】
+  $LinuxHost = $Config.linuxHost
+
+【値の例】
+  windows-dev
+
+【用途】
+  SSH接続コマンド
+
+─────────────────────────────────────────────────────────────
+
+▶ $LinuxBase
+
+【説明】
+  Linux側のプロジェクトベースディレクトリ
+
+【設定方法】
+  $LinuxBase = $Config.linuxBase
+
+【値の例】
+  /mnt/LinuxHDD
+
+【用途】
+  SSH経由のファイル操作、Claude起動
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+■ システム環境変数（Windows）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+▶ %LOCALAPPDATA%
+
+【説明】
+  Windowsのローカルアプリケーションデータディレクトリ
+
+【デフォルト値】
+  C:\Users\<username>\AppData\Local
+
+【用途】
+  Windows Terminal設定ファイルのパス構築
+
+【例】
+  %LOCALAPPDATA%\Packages\Microsoft.WindowsTerminal_...\LocalState\settings.json
+
+─────────────────────────────────────────────────────────────
+
+▶ %WT_SESSION%
+
+【説明】
+  Windows Terminalセッション識別子（Windows Terminalが設定）
+
+【用途】
+  Windows Terminal内で実行されているか判定
+
+【判定方法】
+  if not defined WT_SESSION (
+    REM Windows Terminal外で実行中
+  )
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+■ システム環境変数（Linux）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+▶ $HOME
+
+【説明】
+  ユーザーのホームディレクトリ
+
+【デフォルト値】
+  /home/<username>
+
+【用途】
+  - ~/.claude/statusline.sh
+  - ~/.claude/settings.json
+  - ~/.ssh/config
+
+【例】
+  $HOME/.claude/settings.json
+
+─────────────────────────────────────────────────────────────
+
+▶ $PATH
+
+【説明】
+  実行可能ファイルの検索パス
+
+【用途】
+  claude, jq, curl, git コマンドの検索
+
+【確認方法】
+  echo $PATH
+
+【追加方法】
+  export PATH=$PATH:/path/to/bin
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【環境変数のカスタマイズ】
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+■ 独自環境変数の追加
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+▶ 方法1: run-claude.sh生成部分を編集
+
+【ファイル】
+  scripts/main/Claude-EdgeDevTools.ps1
+  scripts/main/Claude-ChromeDevTools-Final.ps1
+
+【編集箇所】
+  320行目付近（環境変数設定部分）
+
+【例】
+  # 環境変数を設定
+  export CLAUDE_CHROME_DEBUG_PORT=${PORT}
+  export MCP_CHROME_DEBUG_PORT=${PORT}
+  export MY_CUSTOM_VAR="custom value"        # 追加
+
+─────────────────────────────────────────────────────────────
+
+▶ 方法2: .bashrc / .zshrc に設定
+
+【ファイル】
+  ~/.bashrc または ~/.zshrc
+
+【例】
+  # Claude DevTools用カスタム環境変数
+  export CLAUDE_LOG_LEVEL=debug
+  export CLAUDE_WORKSPACE=/mnt/LinuxHDD
+
+【反映】
+  source ~/.bashrc
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+■ 環境変数の確認・デバッグ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+▶ すべての環境変数を表示（Linux）
+
+【コマンド】
+  env
+  または
+  printenv
+
+【出力例】
+  CLAUDE_CHROME_DEBUG_PORT=9222
+  MCP_CHROME_DEBUG_PORT=9222
+  HOME=/home/username
+  PATH=/usr/local/bin:/usr/bin:/bin
+  ...
+
+─────────────────────────────────────────────────────────────
+
+▶ 特定の環境変数を表示（Linux）
+
+【コマンド】
+  echo $CLAUDE_CHROME_DEBUG_PORT
+
+【出力例】
+  9222
+
+─────────────────────────────────────────────────────────────
+
+▶ 環境変数が設定されているか確認（Linux）
+
+【コマンド】
+  [ -z "$CLAUDE_CHROME_DEBUG_PORT" ] && echo "未設定" || echo "設定済み: $CLAUDE_CHROME_DEBUG_PORT"
+
+─────────────────────────────────────────────────────────────
+
+▶ PowerShell環境変数確認（Windows）
+
+【コマンド】
+  Get-ChildItem Env:
+
+【特定の変数】
+  $env:LOCALAPPDATA
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【環境変数の優先順位】
+
+1. run-claude.sh内で明示的に設定された変数
+   ↓
+2. シェル起動時に読み込まれる ~/.bashrc / ~/.zshrc
+   ↓
+3. システムデフォルトの環境変数
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【セキュリティ上の注意】
+
+■ 機密情報を環境変数に含めない
+  - パスワード
+  - APIキー
+  - トークン
+
+■ 環境変数のログ出力に注意
+  - デバッグ時の echo や Write-Host
+  - ログファイルへの出力
+
+■ .bashrc / .zshrc のパーミッション
+  chmod 600 ~/.bashrc
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【トラブルシューティング】
+
+■ 環境変数が反映されない
+
+【原因】
+  - シェルの再起動が必要
+  - export が抜けている
+  - スクリプト内でのスコープ問題
+
+【解決方法】
+  # 明示的に export
+  export CLAUDE_CHROME_DEBUG_PORT=9222
+
+  # シェル再起動
+  exec bash
+
+  # または source で再読み込み
+  source ~/.bashrc
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【参考リンク】
+
+- Bash環境変数: https://www.gnu.org/software/bash/manual/html_node/Environment.html
+- PowerShell環境変数: https://docs.microsoft.com/powershell/module/microsoft.powershell.core/about/about_environment_variables
