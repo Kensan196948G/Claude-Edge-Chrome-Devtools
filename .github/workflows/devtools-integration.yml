@@ -1,0 +1,174 @@
+name: DevTools Integration Test
+
+on:
+  schedule:
+    # 毎日午前2時（JST）に実行
+    - cron: '0 17 * * *'  # UTC 17:00 = JST 02:00
+  workflow_dispatch:
+    inputs:
+      browser:
+        description: 'ブラウザ選択'
+        required: true
+        default: 'chrome'
+        type: choice
+        options:
+          - edge
+          - chrome
+      port:
+        description: 'DevToolsポート'
+        required: false
+        default: '9222'
+
+jobs:
+  test-devtools-protocol:
+    name: DevTools Protocol Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start Chrome with Remote Debugging
+        run: |
+          # Chrome をヘッドレスモードで起動
+          google-chrome \
+            --headless \
+            --remote-debugging-port=9222 \
+            --user-data-dir=/tmp/chrome-devtools-test \
+            --no-first-run \
+            --no-default-browser-check \
+            &
+
+          # 起動待機
+          sleep 3
+
+      - name: Test DevTools Endpoints
+        run: |
+          echo "🔍 DevTools Protocol エンドポイントテスト"
+
+          PORT=9222
+
+          # /json/version
+          echo ""
+          echo "📋 1. /json/version"
+          if curl -sf "http://localhost:${PORT}/json/version" | jq '.'; then
+            echo "✅ OK"
+          else
+            echo "❌ FAIL"
+            exit 1
+          fi
+
+          # /json/list
+          echo ""
+          echo "📋 2. /json/list (タブ一覧)"
+          TAB_COUNT=$(curl -sf "http://localhost:${PORT}/json/list" | jq 'length')
+          echo "タブ数: ${TAB_COUNT}"
+
+          if [ "$TAB_COUNT" -gt 0 ]; then
+            echo "✅ OK"
+          else
+            echo "❌ FAIL: タブがありません"
+            exit 1
+          fi
+
+          # WebSocket エンドポイント
+          echo ""
+          echo "📋 3. WebSocket エンドポイント"
+          WS_URL=$(curl -sf "http://localhost:${PORT}/json/list" | jq -r '.[0].webSocketDebuggerUrl')
+          echo "WebSocket URL: ${WS_URL}"
+
+          if [ -n "$WS_URL" ]; then
+            echo "✅ OK"
+          else
+            echo "❌ FAIL"
+            exit 1
+          fi
+
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ すべてのDevTools Protocol テスト成功"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+  test-hooks:
+    name: Hooks Functionality Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test on-startup.sh
+        run: |
+          echo "🔍 on-startup.sh テスト"
+
+          # 環境変数を設定
+          export CLAUDE_CHROME_DEBUG_PORT=9222
+          export MCP_CHROME_DEBUG_PORT=9222
+          export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+
+          # .mcp.json モック作成
+          mkdir -p test-project/.claude/hooks
+          cp scripts/hooks/on-startup.sh test-project/.claude/hooks/
+          echo '{"mcpServers":{"test-mcp":{}}}' > test-project/.mcp.json
+
+          cd test-project
+          bash .claude/hooks/on-startup.sh
+
+      - name: Test pre-commit.sh
+        run: |
+          echo "🔍 pre-commit.sh テスト"
+
+          cd test-project
+          git init
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+
+          mkdir -p .claude/hooks
+          cp ../scripts/hooks/pre-commit.sh .claude/hooks/
+          ln -s ../../.claude/hooks/pre-commit.sh .git/hooks/pre-commit
+
+          # Token を含むファイルを作成
+          echo "ghp_1234567890123456789012345678901234567" > secret.txt
+          git add secret.txt
+
+          # コミット試行（失敗するべき）
+          if git commit -m "test" 2>&1 | grep "機密情報が検出されました"; then
+            echo "✅ pre-commit hook が正常に動作"
+          else
+            echo "❌ pre-commit hook が機密情報を検出できませんでした"
+            exit 1
+          fi
+
+  test-mcp-setup:
+    name: MCP Setup Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Test MCP Setup Script
+        run: |
+          echo "🔍 MCP セットアップスクリプトテスト"
+
+          mkdir -p test-project
+          echo '{"mcpServers":{}}' > test-project/.mcp.json
+
+          # setup-mcp.sh 実行（GitHub Token なし）
+          bash scripts/mcp/setup-mcp.sh test-project "" ""
+
+          # MCP サーバーが追加されたか確認
+          MCP_COUNT=$(jq '.mcpServers | length' test-project/.mcp.json)
+          echo "追加された MCP サーバー数: ${MCP_COUNT}"
+
+          if [ "$MCP_COUNT" -gt 0 ]; then
+            echo "✅ MCP セットアップ成功"
+          else
+            echo "❌ MCP セットアップ失敗"
+            exit 1
+          fi

@@ -1,0 +1,148 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'バージョン番号 (例: v1.2.1)'
+        required: true
+
+jobs:
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract Version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "📦 バージョン: ${VERSION}"
+
+      - name: Generate Changelog
+        id: changelog
+        run: |
+          echo "📝 変更履歴生成中..."
+
+          # 前回のタグを取得
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+          if [ -n "$PREVIOUS_TAG" ]; then
+            echo "前回リリース: ${PREVIOUS_TAG}"
+
+            # コミットログから変更履歴を生成
+            CHANGELOG=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+          else
+            echo "初回リリース"
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" --no-merges | head -20)
+          fi
+
+          # マルチライン対応
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: Release ${{ steps.version.outputs.version }}
+          body: |
+            ## 🎉 Claude-EdgeChromeDevTools ${{ steps.version.outputs.version }}
+
+            ### 📋 主な変更点
+
+            ${{ steps.changelog.outputs.changelog }}
+
+            ### 📦 インストール
+
+            ```powershell
+            # リポジトリをクローン
+            git clone https://github.com/Kensan196948G/Claude-Edge-Chrome-Devtools.git
+            cd Claude-Edge-Chrome-Devtools
+
+            # config.json を作成
+            cp config/config.json.template config/config.json
+            # config.json を編集（環境に合わせて設定）
+
+            # 実行
+            start.bat
+            ```
+
+            ### 🔗 リンク
+
+            - [ドキュメント](https://github.com/Kensan196948G/Claude-Edge-Chrome-Devtools/tree/main/docs)
+            - [トラブルシューティング](https://github.com/Kensan196948G/Claude-Edge-Chrome-Devtools/blob/main/docs/SystemAdministrator/05_トラブルシューティング(Troubleshooting).txt)
+            - [FAQ](https://github.com/Kensan196948G/Claude-Edge-Chrome-Devtools/blob/main/docs/SystemAdministrator/08_FAQ.txt)
+
+            ### 🙏 謝辞
+
+            Co-Authored-By: Claude Sonnet 4.5 (1M context) <noreply@anthropic.com>
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-artifacts:
+    name: Build Release Artifacts
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Distribution Package
+        shell: pwsh
+        run: |
+          Write-Host "📦 配布パッケージ作成中..." -ForegroundColor Cyan
+
+          $version = if ($env:GITHUB_REF -match 'refs/tags/(.*)') { $matches[1] } else { "dev" }
+          $packageName = "Claude-EdgeChromeDevTools-$version"
+
+          # パッケージディレクトリ作成
+          New-Item -ItemType Directory -Path $packageName -Force
+
+          # 必要なファイルをコピー
+          $include = @(
+            "scripts/",
+            "config/config.json.template",
+            "docs/",
+            ".claude/",
+            ".github/",
+            "start.bat",
+            "CLAUDE.md",
+            "README.md",
+            "GEMINI.md",
+            "LICENSE",
+            ".gitignore"
+          )
+
+          foreach ($item in $include) {
+            if (Test-Path $item) {
+              Copy-Item -Path $item -Destination "$packageName\" -Recurse -Force
+            }
+          }
+
+          # ZIP 圧縮
+          Compress-Archive -Path $packageName -DestinationPath "${packageName}.zip"
+
+          Write-Host "✅ パッケージ作成完了: ${packageName}.zip"
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v1
+        with:
+          files: Claude-EdgeChromeDevTools-*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

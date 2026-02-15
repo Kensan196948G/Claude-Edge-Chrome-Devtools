@@ -1,0 +1,84 @@
+name: Documentation
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    paths:
+      - '**.md'
+      - 'docs/**'
+  workflow_dispatch:
+
+jobs:
+  markdown-lint:
+    name: Markdown Linting
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint Markdown Files
+        uses: DavidAnson/markdownlint-cli2-action@v18
+        with:
+          globs: |
+            **/*.md
+            !node_modules
+
+  link-check:
+    name: Check Broken Links
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Links in Markdown
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: 'yes'
+          config-file: '.github/markdown-link-check-config.json'
+
+  consistency-check:
+    name: Documentation Consistency
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Z/X Drive Consistency
+        run: |
+          echo "🔍 Z/X ドライブ参照の一貫性チェック"
+
+          # Z:\ の不正な参照を検出
+          if grep -rn "Z:\\\|Z:|Zドライブ|Z ドライブ" *.md docs/*.md 2>/dev/null; then
+            echo "❌ Z:\ ドライブの参照が残っています（X:\ に統一すべき）"
+            exit 1
+          fi
+
+          echo "✅ ドライブ参照が統一されています（X:\）"
+
+      - name: Check Host Name Consistency
+        run: |
+          echo "🔍 ホスト名の一貫性チェック"
+
+          # ハードコードされた windows-dev を検出
+          if grep -rn "windows-dev" *.md docs/*.md 2>/dev/null | grep -v "<your-linux-host>"; then
+            echo "❌ ハードコードされたホスト名 'windows-dev' が残っています"
+            exit 1
+          fi
+
+          echo "✅ ホスト名がプレースホルダ化されています"
+
+      - name: Check Port Range Consistency
+        run: |
+          echo "🔍 ポート範囲の一貫性チェック"
+
+          # 9222-9225 の古い記載を検出
+          if grep -rn "9222-9225" *.md docs/*.md 2>/dev/null; then
+            echo "❌ 古いポート範囲 '9222-9225' が残っています（9222-9229 に統一すべき）"
+            exit 1
+          fi
+
+          echo "✅ ポート範囲が統一されています（9222-9229）"

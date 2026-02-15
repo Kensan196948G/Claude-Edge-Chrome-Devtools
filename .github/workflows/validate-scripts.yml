@@ -1,0 +1,147 @@
+name: Validate Scripts
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  validate-powershell:
+    name: PowerShell Syntax Check
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate PowerShell Scripts
+        shell: pwsh
+        run: |
+          Write-Host "🔍 PowerShell スクリプト構文チェック" -ForegroundColor Cyan
+
+          $scripts = Get-ChildItem -Path scripts -Filter *.ps1 -Recurse
+          $errors = 0
+
+          foreach ($script in $scripts) {
+            Write-Host "`n📝 チェック中: $($script.Name)" -ForegroundColor Yellow
+
+            $parseErrors = $null
+            $null = [System.Management.Automation.PSParser]::Tokenize(
+              (Get-Content $script.FullName -Raw),
+              [ref]$parseErrors
+            )
+
+            if ($parseErrors.Count -gt 0) {
+              Write-Host "  ❌ 構文エラー:" -ForegroundColor Red
+              $parseErrors | ForEach-Object {
+                Write-Host "    Line $($_.Token.StartLine): $($_.Message)" -ForegroundColor Red
+              }
+              $errors++
+            } else {
+              Write-Host "  ✅ OK" -ForegroundColor Green
+            }
+          }
+
+          if ($errors -gt 0) {
+            throw "$errors 個のスクリプトに構文エラーがあります"
+          }
+
+          Write-Host "`n✅ すべてのスクリプトが正常です" -ForegroundColor Green
+
+  validate-bash:
+    name: Bash Script Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Validate Bash Scripts
+        run: |
+          echo "🔍 Bash スクリプトチェック"
+
+          find scripts -name "*.sh" -type f | while read -r script; do
+            echo ""
+            echo "📝 チェック中: $script"
+
+            if shellcheck "$script"; then
+              echo "  ✅ OK"
+            else
+              echo "  ❌ shellcheck でエラー検出"
+              exit 1
+            fi
+          done
+
+          echo ""
+          echo "✅ すべてのBashスクリプトが正常です"
+
+  validate-json:
+    name: JSON Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate JSON Files
+        run: |
+          echo "🔍 JSON ファイル検証"
+
+          find . -name "*.json" -type f | while read -r json_file; do
+            # .git ディレクトリは除外
+            if [[ "$json_file" == *".git"* ]]; then
+              continue
+            fi
+
+            echo ""
+            echo "📝 チェック中: $json_file"
+
+            if jq empty "$json_file" 2>/dev/null; then
+              echo "  ✅ OK"
+            else
+              echo "  ❌ 無効なJSON"
+              exit 1
+            fi
+          done
+
+          echo ""
+          echo "✅ すべてのJSONファイルが正常です"
+
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Secret Scanner
+        run: |
+          echo "🔍 機密情報スキャン"
+
+          # 機密情報パターン
+          PATTERNS=(
+            "ghp_[A-Za-z0-9]{36}"
+            "sk-[A-Za-z0-9]{48}"
+            "AKIA[0-9A-Z]{16}"
+          )
+
+          FOUND=false
+
+          for pattern in "${PATTERNS[@]}"; do
+            if git diff HEAD~1 HEAD | grep -E "$pattern" >/dev/null 2>&1; then
+              echo "❌ 機密情報が検出されました: $pattern"
+              FOUND=true
+            fi
+          done
+
+          if [ "$FOUND" = true ]; then
+            echo ""
+            echo "⚠️  コミットに機密情報が含まれています"
+            exit 1
+          fi
+
+          echo "✅ 機密情報スキャン完了（問題なし）"
