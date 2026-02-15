@@ -28,6 +28,10 @@ echo  [Windows Terminal Settings]
 echo  5. Windows Terminal Setup Guide
 echo  6. Auto-Configure Windows Terminal (PowerShell)
 echo.
+echo  [Diagnostics]
+echo  7. MCP Health Check
+echo  8. Drive Mapping Diagnostic
+echo.
 echo  0. Exit
 echo.
 echo ===============================================
@@ -66,6 +70,14 @@ if "%choice%"=="5" (
 )
 if "%choice%"=="6" (
     call :setup_wt_auto
+    goto menu
+)
+if "%choice%"=="7" (
+    call :mcp_health_check
+    goto menu
+)
+if "%choice%"=="8" (
+    call :drive_diagnostic
     goto menu
 )
 if "%choice%"=="0" (
@@ -167,4 +179,62 @@ if /i "%confirm%"=="Y" (
     echo Cancelled.
     pause
 )
+goto :eof
+
+
+:mcp_health_check
+cls
+echo.
+echo ===============================================
+echo  MCP Health Check
+===============================================
+echo.
+echo This will check the connection status of all
+echo 8 MCP servers configured in your project.
+echo.
+echo Available MCP Servers:
+echo  - brave-search
+echo  - ChromeDevTools
+echo  - context7
+echo  - github
+echo  - memory
+echo  - playwright
+echo  - sequential-thinking
+echo  - plugin:claude-mem:mem-search
+echo.
+echo Project? (Enter project name or press Enter to skip)
+set /p "project_name="
+
+if defined project_name (
+    echo.
+    echo Running MCP health check for project: %project_name%...
+    echo.
+    pwsh -NoProfile -ExecutionPolicy Bypass -Command "ssh kensan1969 'cd /mnt/LinuxHDD/%project_name% && if [ -f scripts/health-check/mcp-health.sh ]; then bash scripts/health-check/mcp-health.sh; else echo \"Error: mcp-health.sh not found. Please run from the main Claude-EdgeChromeDevTools directory or ensure the project has the health check script.\"; fi' 2>&1"
+    echo.
+) else (
+    echo.
+    echo Skipped.
+)
+
+pause
+goto :eof
+
+
+:drive_diagnostic
+cls
+echo.
+echo ===============================================
+echo  Drive Mapping Diagnostic
+===============================================
+echo.
+echo This will diagnose X:\ drive accessibility
+echo and show all available detection methods.
+echo.
+echo Press any key to run diagnostic...
+pause >nul
+
+pwsh -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\test\test-drive-mapping.ps1"
+
+echo.
+pause
 goto :eof

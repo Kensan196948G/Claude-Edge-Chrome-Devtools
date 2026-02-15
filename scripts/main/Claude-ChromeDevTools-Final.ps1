@@ -3,6 +3,26 @@
 # プロジェクト選択 + DevToolsポート判別 + run-claude.sh自動生成 + 自動接続
 # ============================================================
 
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory=$false)]
+    [ValidateSet('edge', 'chrome', '')]
+    [string]$Browser = "",           # "" = 対話モード, "edge"/"chrome" = 非対話モード
+
+    [Parameter(Mandatory=$false)]
+    [string]$Project = "",           # "" = 対話モード, "project-name" = 非対話モード
+
+    [Parameter(Mandatory=$false)]
+    [ValidateRange(0, 65535)]
+    [int]$Port = 0,                  # 0 = 自動割り当て, 9222-9229 = 指定ポート
+
+    [Parameter(Mandatory=$false)]
+    [switch]$NonInteractive,         # 非対話フラグ
+
+    [Parameter(Mandatory=$false)]
+    [switch]$SkipBrowser             # CI環境用（ブラウザ起動スキップ）
+)
+
 $ErrorActionPreference = "Stop"
 
 # ===== ヘルパー関数 =====
@@ -119,15 +139,51 @@ if (-not $DevToolsPort) {
 # グローバル変数に設定 (クリーンアップハンドラー用)
 $Global:DevToolsPort = $DevToolsPort
 
-# ===== ブラウザ自動選択UI =====
-Write-Host "`n🌐 ブラウザを選択してください:`n"
-Write-Host "[1] Microsoft Edge"
-Write-Host "[2] Google Chrome"
-Write-Host ""
+# ===== 非対話モード処理 =====
+if ($NonInteractive) {
+    Write-Host "`nℹ️  非対話モード" -ForegroundColor Cyan
 
-# 入力検証付きブラウザ選択
-do {
-    $BrowserChoice = Read-Host "番号を入力 (1-2, デフォルト: 2)"
+    # 必須パラメータチェック
+    if (-not $Browser) {
+        Write-Error "❌ 非対話モードでは -Browser パラメータが必須です (edge または chrome)"
+    }
+    if (-not $Project) {
+        Write-Error "❌ 非対話モードでは -Project パラメータが必須です"
+    }
+
+    # ポート指定がある場合は上書き
+    if ($Port -gt 0) {
+        if ($Port -notin $AvailablePorts) {
+            Write-Warning "指定されたポート $Port は config.json の ports 配列にありません"
+        }
+        $DevToolsPort = $Port
+        $Global:DevToolsPort = $Port
+    }
+
+    # ブラウザ選択を自動化
+    $BrowserChoice = if ($Browser -eq "edge") { "1" } else { "2" }
+
+    Write-Host "  ブラウザ: $Browser"
+    Write-Host "  プロジェクト: $Project"
+    Write-Host "  ポート: $DevToolsPort"
+    if ($SkipBrowser) {
+        Write-Host "  ブラウザ起動: スキップ" -ForegroundColor Yellow
+    }
+    Write-Host ""
+}
+
+# ===== ブラウザ自動選択UI =====
+if (-not $NonInteractive) {
+    Write-Host "`n🌐 ブラウザを選択してください:`n"
+    Write-Host "[1] Microsoft Edge"
+    Write-Host "[2] Google Chrome"
+    Write-Host ""
+}
+
+# 入力検証付きブラウザ選択（対話モードのみ）
+if (-not $NonInteractive) {
+    do {
+        $BrowserChoice = Read-Host "番号を入力 (1-2, デフォルト: 2)"
 
     # 空入力はデフォルト
     if ([string]::IsNullOrWhiteSpace($BrowserChoice)) {
@@ -264,15 +320,28 @@ if ($Projects.Count -eq 0) {
     Write-Error "❌ プロジェクトルート ($ProjectRootPath) にプロジェクトが見つかりません"
 }
 
-Write-Host "📦 プロジェクトを選択してください`n"
+# 非対話モード: プロジェクト名から自動選択
+if ($NonInteractive -and $Project) {
+    $SelectedProject = $Projects | Where-Object { $_.Name -eq $Project }
 
-for ($i = 0; $i -lt $Projects.Count; $i++) {
-    Write-Host "[$($i+1)] $($Projects[$i].Name)"
-}
+    if (-not $SelectedProject) {
+        Write-Error "❌ プロジェクト '$Project' が見つかりません。利用可能: $($Projects.Name -join ', ')"
+    }
 
-# 入力検証付きインデックス選択
-do {
-    $Index = Read-Host "`n番号を入力 (1-$($Projects.Count))"
+    Write-Host "📦 プロジェクト: $($SelectedProject.Name) (非対話モード)`n" -ForegroundColor Cyan
+    $ProjectName = $SelectedProject.Name
+    $ProjectRoot = $SelectedProject.FullName
+} else {
+    # 対話モード: ユーザーに選択を促す
+    Write-Host "📦 プロジェクトを選択してください`n"
+
+    for ($i = 0; $i -lt $Projects.Count; $i++) {
+        Write-Host "[$($i+1)] $($Projects[$i].Name)"
+    }
+
+    # 入力検証付きインデックス選択
+    do {
+        $Index = Read-Host "`n番号を入力 (1-$($Projects.Count))"
 
     # 数値チェック
     if ($Index -notmatch '^\d+$') {
@@ -289,13 +358,19 @@ do {
     }
 
     # 検証成功
-    $Project = $Projects[$IndexNum - 1]
+    $SelectedProject = $Projects[$IndexNum - 1]
     break
 
 } while ($true)
 
-$ProjectName = $Project.Name
-$ProjectRoot = $Project.FullName
+    $ProjectName = $SelectedProject.Name
+    $ProjectRoot = $SelectedProject.FullName
+}
+
+# プロジェクト確認
+if (-not $ProjectName -or -not $ProjectRoot) {
+    Write-Error "❌ プロジェクトが正しく選択されていません"
+}
 
 Write-Host "`n✅ 選択プロジェクト: $ProjectName"
 
@@ -341,10 +416,15 @@ Write-Host "✅ 使用ポート: $DevToolsPort (自動選択)"
 # ============================================================
 # ④ ブラウザ DevTools 起動（専用プロファイル）
 # ============================================================
-$BrowserProfile = "C:\DevTools-$SelectedBrowser-$DevToolsPort"
-$ProcessName = if ($SelectedBrowser -eq "edge") { "msedge" } else { "chrome" }
 
-Write-Host "`n🌐 $BrowserName DevTools 起動準備..."
+if ($SkipBrowser) {
+    Write-Host "`nℹ️  ブラウザ起動をスキップします（-SkipBrowser フラグ）" -ForegroundColor Yellow
+    Write-Host "   DevTools は既に起動済みであることを前提とします`n"
+} else {
+    $BrowserProfile = "C:\DevTools-$SelectedBrowser-$DevToolsPort"
+    $ProcessName = if ($SelectedBrowser -eq "edge") { "msedge" } else { "chrome" }
+
+    Write-Host "`n🌐 $BrowserName DevTools 起動準備..."
 
 # 既存の DevTools プロセスを確認して終了
 $existingProcesses = Get-Process $ProcessName -ErrorAction SilentlyContinue | Where-Object {
@@ -450,6 +530,7 @@ if ($devToolsReady) {
         exit 1
     }
 }
+}  # End of SkipBrowser conditional
 
 # ============================================================
 # ⑤ run-claude.sh 自動生成
@@ -913,6 +994,7 @@ $HooksDir = Join-Path (Split-Path $PSScriptRoot -Parent) "hooks"
 $HooksEnabled = (Test-Path $HooksDir)
 $EncodedOnStartup = ""
 $EncodedPreCommit = ""
+$EncodedPostCheckout = ""
 $EncodedContextLoader = ""
 
 if ($HooksEnabled) {
@@ -930,6 +1012,14 @@ if ($HooksEnabled) {
         $content = Get-Content $preCommitPath -Raw
         $content = $content -replace "`r`n", "`n" -replace "`r", "`n"
         $EncodedPreCommit = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($content))
+    }
+
+    # post-checkout.sh をBase64エンコード
+    $postCheckoutPath = Join-Path $HooksDir "post-checkout.sh"
+    if (Test-Path $postCheckoutPath) {
+        $content = Get-Content $postCheckoutPath -Raw
+        $content = $content -replace "`r`n", "`n" -replace "`r", "`n"
+        $EncodedPostCheckout = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($content))
     }
 
     # context-loader.sh をBase64エンコード
@@ -1135,6 +1225,16 @@ if ($HooksEnabled) {
         # Git hooks シンボリックリンク作成
         ssh $LinuxHost "cd $EscapedLinuxBase/$EscapedProjectName && [ -d .git/hooks ] && ln -sf ../../.claude/hooks/pre-commit.sh .git/hooks/pre-commit || true" 2>$null
         Write-Host "  ✅ Git pre-commit hook 登録完了"
+    }
+
+    # post-checkout.sh 転送
+    if ($EncodedPostCheckout) {
+        ssh $LinuxHost "echo '$EncodedPostCheckout' | base64 -d > $EscapedLinuxHooksDir/post-checkout.sh && chmod +x $EscapedLinuxHooksDir/post-checkout.sh"
+        Write-Host "  ✅ post-checkout.sh 転送完了"
+
+        # Git hooks シンボリックリンク作成
+        ssh $LinuxHost "cd $EscapedLinuxBase/$EscapedProjectName && [ -d .git/hooks ] && ln -sf ../../.claude/hooks/post-checkout.sh .git/hooks/post-checkout || true" 2>$null
+        Write-Host "  ✅ Git post-checkout hook 登録完了"
     }
 
     # context-loader.sh 転送

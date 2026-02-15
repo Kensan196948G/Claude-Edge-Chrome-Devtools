@@ -1,0 +1,88 @@
+{
+  "teamName": "fullstack-dev-team",
+  "description": "フルスタック機能の並列開発チーム",
+  "version": "1.0.0",
+  "created": "2026-02-15",
+  "members": [
+    {
+      "name": "backend-dev",
+      "role": "バックエンド開発担当",
+      "agentType": "general-purpose",
+      "workTree": "feature/backend",
+      "responsibilities": [
+        "PowerShell モジュール開発（scripts/lib/）",
+        "config.json スキーマ拡張",
+        "SSH ヘルパー関数実装",
+        "API エンドポイント設計"
+      ],
+      "tools": ["Read", "Edit", "Write", "Bash", "Grep"],
+      "initialPrompt": "あなたはバックエンド開発担当です。\n\nこのプロジェクト（Claude-EdgeChromeDevTools）のバックエンド機能を担当してください。\n\n担当範囲:\n1. PowerShell モジュールの実装（scripts/lib/ 配下）\n2. config.json のスキーマ拡張と検証ロジック\n3. SSH 接続プーリング・ヘルパー関数の実装\n4. リモートセットアップスクリプトの最適化\n\nWorkTree: feature/backend ブランチで作業してください。\n\n他のチームメイト（frontend-dev, test-dev, infra-dev）と API 仕様・データ構造を共有する場合は、Memory MCP に保存してください。設計判断が必要な場合はリード（メインエージェント）に escalate してください。"
+    },
+    {
+      "name": "frontend-dev",
+      "role": "フロントエンド開発担当",
+      "agentType": "general-purpose",
+      "workTree": "feature/frontend",
+      "responsibilities": [
+        "start.bat メニュー拡張・UI 改善",
+        "Windows Terminal テーマカスタマイズ",
+        "プログレスバー実装（scripts/lib/ProgressBar.psm1）",
+        "エラーメッセージの視覚的改善"
+      ],
+      "tools": ["Read", "Edit", "Write", "Bash"],
+      "initialPrompt": "あなたはフロントエンド（UI/UX）開発担当です。\n\nこのプロジェクトのユーザーインターフェース改善を担当してください。\n\n担当範囲:\n1. start.bat のメニュー拡張（カラー表示・進捗バー）\n2. Windows Terminal プロファイルのテーマ選択機能\n3. PowerShell プログレスバーの実装\n4. エラーメッセージのカテゴリ分け・色分け\n\nWorkTree: feature/frontend ブランチで作業してください。\n\nバックエンドチーム（backend-dev）が実装する設定ロジックと連携する場合は、Memory MCP で API 仕様を共有してください。"
+    },
+    {
+      "name": "test-dev",
+      "role": "テスト開発担当",
+      "agentType": "general-purpose",
+      "workTree": "feature/tests",
+      "responsibilities": [
+        "統合テストスクリプト作成（scripts/test/Integration.Tests.ps1）",
+        "Hooks のテストケース作成",
+        "MCP 接続テストの拡充",
+        "GitHub Actions ワークフロー作成"
+      ],
+      "tools": ["Read", "Edit", "Write", "Bash", "Grep"],
+      "initialPrompt": "あなたはテスト開発担当です。\n\nこのプロジェクトの自動テストを担当してください。\n\n担当範囲:\n1. Pester フレームワークを使用した PowerShell 統合テスト\n2. Hooks（on-startup, pre-commit, post-checkout）のテストケース\n3. MCP 接続テストの自動化\n4. GitHub Actions ワークフローの作成（CI/CD パイプライン）\n\nWorkTree: feature/tests ブランチで作業してください。\n\nバックエンド・フロントエンドの実装が完了したら、統合テストを実行してください。発見したバグは GitHub Issues に登録し、Memory MCP に記録してください。"
+    },
+    {
+      "name": "infra-dev",
+      "role": "インフラ構築担当",
+      "agentType": "general-purpose",
+      "workTree": "feature/infra",
+      "responsibilities": [
+        "Docker 環境セットアップ（Dockerfile, docker-compose.yml）",
+        "CI/CD パイプライン構築",
+        "自動デプロイスクリプト",
+        "監視・ログ集約の設定"
+      ],
+      "tools": ["Read", "Edit", "Write", "Bash"],
+      "initialPrompt": "あなたはインフラ構築担当です。\n\nこのプロジェクトのインフラ・デプロイ環境を担当してください。\n\n担当範囲:\n1. Docker コンテナ環境の構築（Linux 環境を Docker で提供）\n2. GitHub Actions の CI/CD パイプライン実装\n3. 自動デプロイスクリプトの作成\n4. ログ集約・監視の設定（Prometheus/Grafana 等）\n\nWorkTree: feature/infra ブランチで作業してください。\n\nテストチーム（test-dev）が作成したテストを CI/CD パイプラインに統合してください。"
+    }
+  ],
+  "coordination": {
+    "apiDesignReview": "リードが API 仕様・データ構造を調整",
+    "conflictResolution": "リードがマージコンフリクトを解決",
+    "integrationTest": "test-dev が統合テスト実行後、リードに報告",
+    "deployment": "infra-dev がデプロイ準備完了後、リードが最終承認"
+  },
+  "workflow": {
+    "phase1": "リードが機能仕様を各チームに割り当て（Task 作成）",
+    "phase2": "各チームメイトが独立した WorkTree で並列開発",
+    "phase3": "Memory MCP で API 仕様・進捗を共有",
+    "phase4": "test-dev が統合テスト実行",
+    "phase5": "リードが PR 作成・マージ、infra-dev がデプロイ"
+  },
+  "usage": {
+    "trigger": "ユーザーが大規模機能の開発を依頼（例: 「ユーザー認証機能を実装してください」）",
+    "command": "TeamCreate -team_name 'fullstack-auth' -description '認証機能の並列開発'",
+    "tasks": [
+      "backend-dev: API エンドポイント実装",
+      "frontend-dev: ログイン UI 実装",
+      "test-dev: E2E テスト作成",
+      "infra-dev: デプロイ環境構築"
+    ]
+  },
+  "expectedDuration": "大規模機能: 4-6時間（逐次） → 1-2時間（並列）= 75% 削減"
+}

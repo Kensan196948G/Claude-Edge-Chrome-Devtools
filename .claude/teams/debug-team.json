@@ -1,0 +1,64 @@
+{
+  "teamName": "debug-team",
+  "description": "並列仮説検証によるバグ調査チーム",
+  "version": "1.0.0",
+  "created": "2026-02-15",
+  "members": [
+    {
+      "name": "hypothesis-1-ssh",
+      "role": "仮説1検証: SSH接続問題",
+      "agentType": "Explore",
+      "investigation": [
+        "SSH 鍵権限の確認（Windows ACL, Linux chmod 600）",
+        "~/.ssh/config の設定確認（ControlMaster, BatchMode）",
+        "SSH 接続ログの分析（ssh -vvv）",
+        "ポートフォワーディング状態の確認"
+      ],
+      "tools": ["Grep", "Read", "Bash"],
+      "initialPrompt": "あなたは SSH 接続問題の調査担当です。\n\n**仮説**: SSH 接続が不安定またはタイムアウトする問題は、鍵権限・設定ファイル・ネットワークのいずれかが原因\n\n調査項目:\n1. SSH 鍵ファイル（~/.ssh/id_ed25519）の権限確認\n   - Windows: icacls で Everyone/Users のアクセス権がないか\n   - Linux: chmod 600 が設定されているか\n2. ~/.ssh/config の設定確認\n   - ControlMaster の設定\n   - BatchMode, ConnectTimeout の値\n3. SSH 接続ログの分析\n   - scripts/main/*.ps1 の SSH 呼び出し箇所を特定\n   - ssh -vvv での詳細ログ取得方法を提案\n4. ポートフォワーディングの確認\n   - netstat で 9222-9229 ポートの LISTEN 状態確認\n\n発見事項は Memory MCP に保存し、リードに報告してください。"
+    },
+    {
+      "name": "hypothesis-2-devtools",
+      "role": "仮説2検証: DevToolsポート競合・応答問題",
+      "agentType": "Explore",
+      "investigation": [
+        "ポート使用状況の確認（Get-NetTCPConnection）",
+        "ブラウザプロセスの競合検出",
+        "DevTools Protocol バージョン不一致",
+        "WebSocket 接続の安定性"
+      ],
+      "tools": ["Grep", "Read", "Bash"],
+      "initialPrompt": "あなたは DevTools ポート競合・応答問題の調査担当です。\n\n**仮説**: DevTools 応答なし・タイムアウトは、ポート競合・プロセス競合・Protocol バージョン不一致のいずれかが原因\n\n調査項目:\n1. ポート使用状況\n   - scripts/main/*.ps1 の Get-NetTCPConnection 使用箇所を確認\n   - 9222-9229 範囲での競合検出ロジックの妥当性\n2. ブラウザプロセスの競合\n   - 同一ポートで複数ブラウザプロセスが起動していないか\n   - Get-CimInstance Win32_Process でのプロセス検索ロジック確認\n3. DevTools Protocol バージョン\n   - /json/version の Protocol-Version が 1.3 であることを確認\n   - 古いブラウザバージョンでの互換性問題\n4. リトライ・タイムアウト設定\n   - MAX_RETRY=10, sleep 2 の妥当性\n   - curl --connect-timeout の値\n\n発見事項は Memory MCP に保存し、リードに報告してください。"
+    },
+    {
+      "name": "hypothesis-3-browser",
+      "role": "仮説3検証: ブラウザプロセス異常・クラッシュ",
+      "agentType": "Explore",
+      "investigation": [
+        "ブラウザ起動オプションの妥当性確認",
+        "プロファイルディレクトリの権限・破損確認",
+        "ブラウザログ（chrome://crashes）の分析",
+        "DevTools Preferences の設定値確認"
+      ],
+      "tools": ["Grep", "Read", "Bash"],
+      "initialPrompt": "あなたはブラウザプロセス異常・クラッシュ問題の調査担当です。\n\n**仮説**: ブラウザ起動失敗・クラッシュは、起動オプション・プロファイル破損・リソース不足のいずれかが原因\n\n調査項目:\n1. ブラウザ起動オプション\n   - scripts/main/*.ps1 の $browserArgs 配列を確認\n   - --remote-debugging-port, --user-data-dir 等の妥当性\n   - Edge 固有オプション（--auto-open-devtools-for-tabs）の影響\n2. プロファイルディレクトリ\n   - C:\\DevTools-{browser}-{port} の権限確認\n   - ディスク容量不足の可能性\n   - プロファイル破損時の復旧方法提案\n3. ブラウザログ\n   - chrome://crashes, edge://crashes の確認方法\n   - Windows イベントログの確認方法\n4. DevTools Preferences（Edge版）\n   - scripts/main/Claude-EdgeDevTools.ps1 L130-170 の Preferences JSON\n   - 設定値の妥当性確認\n\n発見事項は Memory MCP に保存し、リードに報告してください。"
+    }
+  ],
+  "convergence": {
+    "method": "各仮説の検証結果を突き合わせ、最も可能性の高い原因を特定",
+    "timeline": "各メンバー30-45分で調査 → リードが15分で統合 → 合計1時間",
+    "output": "統合レポート（根本原因・修正案・優先度付き）"
+  },
+  "usage": {
+    "trigger": "ユーザーがバグ報告（例: 「SSH接続が頻繁にタイムアウトします」）",
+    "command": "TeamCreate -team_name 'debug-ssh-timeout' -description 'SSH タイムアウト問題の並列仮説検証'",
+    "process": [
+      "1. リードが3つの仮説を立てる（SSH鍵, DevToolsポート, ブラウザプロセス）",
+      "2. 各メンバーに仮説を割り当て（TaskCreate）",
+      "3. メンバーが並列で仮説を検証（30-45分）",
+      "4. 発見事項を Memory MCP に保存・リードに報告",
+      "5. リードが統合分析・根本原因特定"
+    ]
+  },
+  "expectedBenefit": "デバッグ時間: 90分（逐次） → 30分（並列）= 70% 削減"
+}
