@@ -13,7 +13,7 @@ param(
     [string]$Project = "",           # "" = 対話モード, "project-name" = 非対話モード
 
     [Parameter(Mandatory=$false)]
-    [string]$Projects = "",          # 複数プロジェクト指定（カンマ区切り: "proj1,proj2,proj3"）
+    $ProjectsInput = "",             # 複数プロジェクト指定（カンマ区切り: "proj1,proj2,proj3"）※内部で$Projects配列を使うため変数名変更
 
     [Parameter(Mandatory=$false)]
     [ValidateRange(0, 65535)]
@@ -485,7 +485,13 @@ if (-not $ProjectRootPath -or -not (Test-Path $ProjectRootPath)) {
 
 Write-Host "✅ プロジェクトルート: $ProjectRootPath" -ForegroundColor Green
 
-$Projects = Get-ChildItem $ProjectRootPath -Directory | Sort-Object Name
+# プロジェクト一覧取得（ディレクトリのみ）
+# 注意: パラメータの [string]$Projects との型衝突を避けるため、変数名は $Projects（配列）を使用
+$RawItems = @(Get-ChildItem -Path $ProjectRootPath -ErrorAction Stop)
+$Projects = @($RawItems |
+    Where-Object { $_.PSIsContainer -eq $true } |
+    Where-Object { ![string]::IsNullOrEmpty($_.Name) } |
+    Sort-Object { $_.Name })
 
 if ($Projects.Count -eq 0) {
     Write-Error "❌ プロジェクトルート ($ProjectRootPath) にプロジェクトが見つかりません"
@@ -493,12 +499,12 @@ if ($Projects.Count -eq 0) {
 
 # 非対話モード: プロジェクト名から自動選択
 # 非対話モード: 複数プロジェクト指定対応
-if ($NonInteractive -and ($Project -or $Projects)) {
+if ($NonInteractive -and ($Project -or $ProjectsInput)) {
     $SelectedProjects = @()
 
-    if ($Projects) {
+    if ($ProjectsInput) {
         # 複数プロジェクト指定（カンマ区切り）
-        $ProjectNames = $Projects -split ',' | ForEach-Object { $_.Trim() }
+        $ProjectNames = $ProjectsInput -split ',' | ForEach-Object { $_.Trim() }
 
         foreach ($projName in $ProjectNames) {
             $proj = $Projects | Where-Object { $_.Name -eq $projName }
