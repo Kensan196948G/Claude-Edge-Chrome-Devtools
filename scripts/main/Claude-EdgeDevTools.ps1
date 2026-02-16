@@ -992,11 +992,11 @@ export MCP_CHROME_DEBUG_PORT=${PORT}
 
 # Puppeteer MCP: 既存ブラウザへの接続設定
 echo "🔌 既存ブラウザへの接続準備..."
-WS_ENDPOINT=\$(curl -s http://127.0.0.1:\${PORT}/json/version 2>/dev/null | jq -r '.webSocketDebuggerUrl' 2>/dev/null)
+WS_ENDPOINT=$(curl -s http://127.0.0.1:${PORT}/json/version 2>/dev/null | jq -r '.webSocketDebuggerUrl' 2>/dev/null)
 
-if [ -n "\$WS_ENDPOINT" ] && [ "\$WS_ENDPOINT" != "null" ]; then
-  echo "✅ WebSocketエンドポイント取得成功: \$WS_ENDPOINT"
-  export PUPPETEER_LAUNCH_OPTIONS="{\\\"browserWSEndpoint\\\": \\\"\${WS_ENDPOINT}\\\"}"
+if [ -n "$WS_ENDPOINT" ] && [ "$WS_ENDPOINT" != "null" ]; then
+  echo "✅ WebSocketエンドポイント取得成功: $WS_ENDPOINT"
+  export PUPPETEER_LAUNCH_OPTIONS="{\\\"browserWSEndpoint\\\": \\\"${WS_ENDPOINT}\\\"}"
   echo "   Puppeteer MCPは既存ブラウザに接続します"
 else
   echo "⚠️  既存ブラウザが見つかりません。Puppeteerは新規ブラウザを起動します。"
