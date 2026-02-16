@@ -29,7 +29,7 @@ echo ""
 
 # 3. MCP サーバー接続確認（8個）
 echo "📋 MCP サーバー:"
-MCP_SERVERS=("brave-search" "ChromeDevTools" "context7" "github" "memory" "playwright" "plugin:claude-mem:mem-search" "sequential-thinking")
+MCP_SERVERS=("brave-search" "context7" "github" "memory" "playwright" "plugin:claude-mem:mem-search" "puppeteer" "sequential-thinking")
 
 for mcp in "${MCP_SERVERS[@]}"; do
     # .mcp.json に設定されているか確認

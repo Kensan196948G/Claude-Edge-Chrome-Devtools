@@ -89,3 +89,4 @@ temp/
 
 # 重複ディレクトリ
 config/config/
+*.backup-pre-puppeteer

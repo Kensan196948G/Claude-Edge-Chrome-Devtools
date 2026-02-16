@@ -65,11 +65,15 @@ else
     echo "⚠️  Brave API Key が設定されていません。brave-search MCP はスキップします。"
 fi
 
-# 2. ChromeDevTools
-MCP_SERVERS["ChromeDevTools"]=$(cat <<'EOF'
+# 2. puppeteer
+MCP_SERVERS["puppeteer"]=$(cat <<'EOF'
 {
   "command": "npx",
-  "args": ["-y", "@automatalabs/mcp-server-chrome-devtools"]
+  "args": ["-y", "@modelcontextprotocol/server-puppeteer"],
+  "env": {
+    "PUPPETEER_LAUNCH_OPTIONS": "{\"headless\": false, \"timeout\": 30000}",
+    "ALLOW_DANGEROUS": "false"
+  }
 }
 EOF
 )
@@ -112,7 +116,7 @@ EOF
 MCP_SERVERS["playwright"]=$(cat <<'EOF'
 {
   "command": "npx",
-  "args": ["-y", "@executeautomation/playwright-mcp-server"]
+  "args": ["-y", "@playwright/mcp@latest"]
 }
 EOF
 )
