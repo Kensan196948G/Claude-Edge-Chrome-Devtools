@@ -147,6 +147,36 @@ function Update-RecentProjects {
     $historyObj | ConvertTo-Json -Depth 3 | Out-File -FilePath $HistoryPath -Encoding UTF8 -Force
 }
 
+# ログファイルをステータス別フォルダに移動
+function Move-LogToStatusFolder {
+    param(
+        [string]$LogPath,
+        [string]$LogRootDir,
+        [int]$ExitCode,
+        [bool]$IsError = $false
+    )
+
+    if (-not $LogPath -or -not (Test-Path $LogPath)) { return }
+
+    $Status = if ($IsError -or $ExitCode -ne 0) { "failure" } else { "success" }
+    $TargetDir = Join-Path $LogRootDir $Status
+
+    if (-not (Test-Path $TargetDir)) {
+        New-Item -ItemType Directory -Path $TargetDir -Force | Out-Null
+    }
+
+    $FileName = Split-Path $LogPath -Leaf
+    $NewFileName = $FileName -replace '\.log$', "-${Status}.log"
+    $NewPath = Join-Path $TargetDir $NewFileName
+
+    try {
+        Move-Item -Path $LogPath -Destination $NewPath -Force
+        Write-Host "📝 ログ保存: $Status/$NewFileName" -ForegroundColor Gray
+    } catch {
+        Write-Warning "ログ移動失敗（元の場所に残します）: $_"
+    }
+}
+
 # ===== グローバル変数 (クリーンアップ用) =====
 $Global:BrowserProcess = $null
 $Global:DevToolsPort = $null
@@ -181,6 +211,23 @@ trap {
     # ログパス表示（エラー発生時）
     if ($LogPath) {
         Write-Host "`n📄 詳細ログ: $LogPath" -ForegroundColor Cyan
+
+        # エラー時のログ移動
+        try {
+            Stop-Transcript -ErrorAction SilentlyContinue
+
+            if ($Config -and $Config.logging) {
+                $LogRootDir = if ([System.IO.Path]::IsPathRooted($Config.logging.logDir)) {
+                    $Config.logging.logDir
+                } else {
+                    Join-Path $RootDir $Config.logging.logDir
+                }
+
+                Move-LogToStatusFolder -LogPath $LogPath -LogRootDir $LogRootDir -ExitCode 1 -IsError $true
+            }
+        } catch {
+            # 移動失敗時は元の場所に残す
+        }
     }
 
     # Linux側ポートクリーンアップ（BatchMode=yesでパスワード要求を防止）
@@ -210,17 +257,48 @@ if (Test-Path $ConfigPath) {
     Write-Error "❌ 設定ファイルが見つかりません: $ConfigPath"
 }
 
-# 古いログファイルクリーンアップ
-if ($Config.logging -and $Config.logging.keepDays -gt 0) {
+# 古いログファイルクリーンアップ（成功/失敗別 + レガシー）
+if ($Config.logging -and $Config.logging.enabled) {
     try {
-        $LogDirPath = $ExecutionContext.InvokeCommand.ExpandString($Config.logging.logDir)
-        $CutoffDate = (Get-Date).AddDays(-$Config.logging.keepDays)
+        $LogRootDir = if ([System.IO.Path]::IsPathRooted($Config.logging.logDir)) {
+            $Config.logging.logDir
+        } else {
+            Join-Path $RootDir $Config.logging.logDir
+        }
 
-        Get-ChildItem -Path $LogDirPath -Filter "${LogPrefix}*.log" -File |
-            Where-Object { $_.LastWriteTime -lt $CutoffDate } |
-            Remove-Item -Force -ErrorAction SilentlyContinue
+        # success/failure/archiveディレクトリ作成
+        @('success', 'failure', 'archive') | ForEach-Object {
+            $dir = Join-Path $LogRootDir $_
+            if (-not (Test-Path $dir)) {
+                New-Item -ItemType Directory -Path $dir -Force | Out-Null
+            }
+        }
 
-        Write-Host "🧹 古いログファイルをクリーンアップしました ($($Config.logging.keepDays)日以前)" -ForegroundColor Gray
+        # 成功ログクリーンアップ
+        if ($Config.logging.successKeepDays -gt 0) {
+            $cutoff = (Get-Date).AddDays(-$Config.logging.successKeepDays)
+            Get-ChildItem (Join-Path $LogRootDir "success") -Filter "*-success.log" -ErrorAction SilentlyContinue |
+                Where-Object { $_.LastWriteTime -lt $cutoff } |
+                Remove-Item -Force -ErrorAction SilentlyContinue
+        }
+
+        # 失敗ログクリーンアップ
+        if ($Config.logging.failureKeepDays -gt 0) {
+            $cutoff = (Get-Date).AddDays(-$Config.logging.failureKeepDays)
+            Get-ChildItem (Join-Path $LogRootDir "failure") -Filter "*-failure.log" -ErrorAction SilentlyContinue |
+                Where-Object { $_.LastWriteTime -lt $cutoff } |
+                Remove-Item -Force -ErrorAction SilentlyContinue
+        }
+
+        # レガシーログクリーンアップ（TEMP フォルダ）
+        if ($Config.logging.legacyKeepDays -gt 0) {
+            $cutoff = (Get-Date).AddDays(-$Config.logging.legacyKeepDays)
+            Get-ChildItem $env:TEMP -Filter "${LogPrefix}*.log" -ErrorAction SilentlyContinue |
+                Where-Object { $_.LastWriteTime -lt $cutoff } |
+                Remove-Item -Force -ErrorAction SilentlyContinue
+        }
+
+        Write-Host "🧹 ログクリーンアップ完了（成功: $($Config.logging.successKeepDays)日、失敗: $($Config.logging.failureKeepDays)日）" -ForegroundColor Gray
     } catch {
         Write-Warning "ログクリーンアップに失敗: $_"
     }
@@ -1346,13 +1424,22 @@ Write-Host ""
 $EscapedLinuxBaseForSSH = Escape-SSHArgument $LinuxBase
 $EscapedProjectNameForSSH = Escape-SSHArgument $ProjectName
 ssh -t -o ControlMaster=no -o ControlPath=none -R "${DevToolsPort}:127.0.0.1:${DevToolsPort}" $LinuxHost "cd $EscapedLinuxBaseForSSH/$EscapedProjectNameForSSH && ./run-claude.sh"
+$SSHExitCode = $LASTEXITCODE
 
 # ===== ログ記録終了 =====
 if ($LogPath) {
     try {
         Stop-Transcript
-        Write-Host "`n📝 ログ記録終了: $LogPath" -ForegroundColor Gray
+
+        # ログをステータス別フォルダに移動
+        $LogRootDir = if ([System.IO.Path]::IsPathRooted($Config.logging.logDir)) {
+            $Config.logging.logDir
+        } else {
+            Join-Path $RootDir $Config.logging.logDir
+        }
+
+        Move-LogToStatusFolder -LogPath $LogPath -LogRootDir $LogRootDir -ExitCode $SSHExitCode -IsError $false
     } catch {
-        # Transcript未開始の場合はエラーを無視
+        Write-Warning "ログ記録終了処理エラー: $_"
     }
 }
