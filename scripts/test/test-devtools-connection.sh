@@ -154,10 +154,10 @@ if command -v claude &> /dev/null; then
         print_success ".mcp.json が見つかりました"
 
         if command -v jq &> /dev/null; then
-            if jq -e '.mcpServers."chrome-devtools"' .mcp.json > /dev/null 2>&1; then
-                print_success "chrome-devtools MCPサーバーが設定されています"
+            if jq -e '.mcpServers."puppeteer"' .mcp.json > /dev/null 2>&1; then
+                print_success "puppeteer MCPサーバーが設定されています"
             else
-                print_warning "chrome-devtools MCPサーバーが .mcp.json に見つかりません"
+                print_warning "puppeteer MCPサーバーが .mcp.json に見つかりません"
             fi
         fi
     else

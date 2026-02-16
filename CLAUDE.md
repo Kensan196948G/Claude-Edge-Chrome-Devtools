@@ -145,9 +145,9 @@ Claude Code Statusline表示スクリプト。以下を表示:
 
 ### SSH接続オプション
 ```powershell
-ssh -t -o ControlMaster=no -o ControlPath=none -R "${PORT}:127.0.0.1:${PORT}" $LinuxHost
+ssh -tt -o ControlMaster=no -o ControlPath=none -R "${PORT}:127.0.0.1:${PORT}" $LinuxHost
 ```
-- `-t`: pseudo-tty割り当て (対話的セッション用)
+- `-tt`: pseudo-tty強制割り当て (対話的セッション用)
 - `ControlMaster=no`: 接続多重化無効
 - `-R`: リモートポートフォワーディング
 

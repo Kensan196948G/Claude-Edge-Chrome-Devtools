@@ -5,6 +5,7 @@
 # 機密情報（絶対にコミットしない）
 config/config.json
 config/config.local.json
+.secrets.json
 *.key
 *.pem
 id_rsa*
