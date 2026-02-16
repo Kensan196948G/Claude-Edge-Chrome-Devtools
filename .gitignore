@@ -82,3 +82,10 @@ coverage/
 tmp/
 temp/
 *.tmp
+
+# 環境変数未展開による誤作成ディレクトリ
+%USERPROFILE%/
+%TEMP%/
+
+# 重複ディレクトリ
+config/config/
