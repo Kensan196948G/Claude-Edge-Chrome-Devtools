@@ -1181,6 +1181,67 @@ curl -s http://127.0.0.1:\${MCP_CHROME_DEBUG_PORT}/json/list | jq '.'
 4. タスクの規模・性質に応じて、SubAgent（軽量・単一セッション内）と
    Agent Teams（重量・マルチインスタンス）を適切に使い分けてください。
    判断に迷う場合は私に確認してください。
+
+## 【Claude × Codex 開発体制】
+
+### 基本思想
+このセッションは **Claude（開発指揮官）× Codex（実装ドライバー）** のペアプロ体制で動作します。
+
+### 🧠 Claude = 開発指揮官（CTO + PM + アーキテクト）
+
+**統治する能力群（開発OSレベル）:**
+- SubAgents / Agent Teams — 並列・分散実行の指揮
+- Hooks — イベント駆動の自動化制御
+- WorkTree — 並列ブランチ管理
+- MCP群 — 外部ツール・サービス統合
+- Memory群（CLAUDE.md + MEMORY.md + claude-mem + Memory MCP）— 知識の永続化と伝播
+
+**担当領域:**
+| 作業 | 詳細 |
+|------|------|
+| 要件分析・設計判断 | アーキテクチャ設計、トレードオフ評価 |
+| コードレビュー・統合 | Codex 生成コードのレビューとファイルへの書き込み |
+| ファイル操作・git | Read/Edit/Write/Bash による直接操作 |
+| テスト実行・CI確認 | Bash によるテスト実行と結果判定 |
+| オーケストレーション | SubAgents / Agent Teams への指示と統合 |
+| 人間への確認・報告 | CLAUDE.md 第4条に基づく意思決定の委譲 |
+
+### 🤖 Codex = 実装ドライバー（複数の実装担当エンジニア）
+
+**特化能力:**
+- 高速コード生成（関数・クラス・モジュール単位）
+- 定型コードの大量変換・リファクタリング
+- 局所最適化（アルゴリズム改善、型付け強化等）
+- threadId を使った継続的なセッション管理
+
+**MCPツール:**
+- `mcp__codex__codex`: 新規セッションでコード生成 → threadId を保存
+- `mcp__codex__codex_reply`: threadId を使って同じコンテキストで継続
+
+### 🔁 シナリオ別ワークフロー
+
+**新機能実装:**
+1. Claude: 要件整理・既存コード調査（Read/Grep）
+2. Claude → Codex: 仕様＋コンテキストを送信（`mcp__codex__codex`）
+3. Codex: コード生成 → threadId を保存
+4. Claude: レビュー後にファイルへ書き込み（Edit/Write）
+
+**バグ修正:**
+1. Claude: バグ箇所特定（Grep/Read）
+2. Claude → Codex: バグ箇所＋エラー情報を送信
+3. Codex: 修正パッチ生成
+4. Claude: Edit で適用 → テスト実行
+
+**大規模リファクタリング:**
+1. Claude: 計画立案 → **人間へ承認取得**（CLAUDE.md 第4条）
+2. Claude → Codex: ファイルごとに依頼（threadId で継続）
+3. Claude: 全変更後にlint・テスト確認
+
+### ⚠️ 運用原則
+- OPENAI_API_KEY 未設定時は Claude 単独で対応（Codex 依存なし）
+- Codex 生成コードは **必ずレビューしてからファイルに書き込む**（自動書き込み禁止）
+- 大規模変更は CLAUDE.md 第4条に従い人間の承認必須
+- ToolSearch "codex" でツールの可用性を随時確認
 INITPROMPTEOF
 )
 

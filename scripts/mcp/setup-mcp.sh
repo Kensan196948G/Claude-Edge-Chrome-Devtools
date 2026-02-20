@@ -25,6 +25,15 @@ if ! command -v jq &>/dev/null; then
     exit 0
 fi
 
+# Bun インストール確認（claude-mem に必要）
+if ! command -v bun &>/dev/null; then
+    echo "📦 Bun をインストール中..."
+    curl -fsSL https://bun.sh/install | bash
+    export PATH="$HOME/.bun/bin:$PATH"
+    echo 'export PATH="$HOME/.bun/bin:$PATH"' >> ~/.bashrc
+fi
+echo "✅ Bun: $(bun --version)"
+
 # .mcp.json バックアップ
 if [ -f "$MCP_CONFIG" ]; then
     cp "$MCP_CONFIG" "$MCP_BACKUP"
@@ -121,16 +130,7 @@ MCP_SERVERS["playwright"]=$(cat <<'EOF'
 EOF
 )
 
-# 7. plugin:claude-mem:mem-search
-MCP_SERVERS["plugin:claude-mem:mem-search"]=$(cat <<'EOF'
-{
-  "command": "npx",
-  "args": ["-y", "@anthropic/claude-mem"]
-}
-EOF
-)
-
-# 8. sequential-thinking
+# 7. sequential-thinking
 MCP_SERVERS["sequential-thinking"]=$(cat <<'EOF'
 {
   "command": "npx",
@@ -138,6 +138,21 @@ MCP_SERVERS["sequential-thinking"]=$(cat <<'EOF'
 }
 EOF
 )
+
+# 8. codex (OpenAI Codex MCP) - OPENAI_API_KEY が ~/.bashrc に設定されている前提
+if [ -n "${OPENAI_API_KEY:-}" ]; then
+    MCP_SERVERS["codex"]=$(cat <<'EOF'
+{
+  "command": "codex",
+  "args": ["mcp-server"]
+}
+EOF
+)
+    echo "✅ codex MCP を設定します"
+else
+    echo "⚠️  OPENAI_API_KEY が未設定のため codex MCP をスキップします"
+    echo "   ~/.bashrc に export OPENAI_API_KEY=sk-... を設定してください"
+fi
 
 # 各 MCP サーバーをチェック・追加
 ADDED_COUNT=0
