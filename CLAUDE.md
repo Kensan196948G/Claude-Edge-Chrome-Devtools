@@ -230,15 +230,16 @@ Claude-EdgeChromeDevTools/
 
 このプロジェクトでは、Claude Code実行時にブラウザ自動化に関する2つのMCPツールが利用可能です：
 
-### ChromeDevTools MCP
+### Puppeteer MCP
 
-**用途**: 既存のブラウザインスタンスに接続してデバッグ・検証
+**用途**: Windows側のブラウザインスタンスに接続してデバッグ・検証
 
 **特徴**:
 - Windows側で起動済みのEdge/Chromeブラウザに接続（SSHポートフォワーディング経由）
-- リアルタイムのDevTools Protocolアクセス
+- DevTools Protocol経由のリアルタイムアクセス
 - 既存のユーザーセッション・Cookie・ログイン状態を利用可能
 - 手動操作との併用が容易
+- Node.js Puppeteer APIの全機能利用可能（待機、リトライ、複雑な操作シーケンス）
 
 **適用シーン**:
 - ログイン済みのWebアプリをデバッグ
@@ -246,6 +247,7 @@ Claude-EdgeChromeDevTools/
 - ネットワークトラフィック（XHR/Fetch）の詳細解析
 - DOM要素の動的変更を追跡・検証
 - パフォーマンス計測（Navigation Timing、Resource Timing等）
+- 複雑な操作フロー（ドラッグ&ドロップ、複数タブ操作等）
 
 **接続テスト**:
 ```bash
@@ -260,11 +262,11 @@ curl -s http://127.0.0.1:${MCP_CHROME_DEBUG_PORT}/json/list | jq '.'
 ```
 
 **主要MCPツール**:
-- `mcp__chrome-devtools__navigate_page`: ページ遷移
-- `mcp__chrome-devtools__click`: 要素クリック
-- `mcp__chrome-devtools__evaluate_script`: JavaScriptコード実行
-- `mcp__chrome-devtools__take_screenshot`: スクリーンショット取得
-- `mcp__chrome-devtools__list_network_requests`: ネットワークリクエスト一覧
+- `mcp__plugin_puppeteer_puppeteer__navigate`: ページ遷移
+- `mcp__plugin_puppeteer_puppeteer__click`: 要素クリック
+- `mcp__plugin_puppeteer_puppeteer__evaluate`: JavaScriptコード実行
+- `mcp__plugin_puppeteer_puppeteer__screenshot`: スクリーンショット取得
+- （その他、`ToolSearch "puppeteer"` で検索）
 
 ### Playwright MCP
 
@@ -293,23 +295,23 @@ curl -s http://127.0.0.1:${MCP_CHROME_DEBUG_PORT}/json/list | jq '.'
 
 | 状況 | 推奨ツール |
 |------|----------|
-| 既存ブラウザの状態（ログイン・Cookie等）を利用 | ChromeDevTools MCP |
+| 既存ブラウザの状態（ログイン・Cookie等）を利用 | Puppeteer MCP |
 | クリーンな環境でのテスト | Playwright MCP |
-| 手動操作との併用が必要 | ChromeDevTools MCP |
+| 手動操作との併用が必要 | Puppeteer MCP |
 | 自動テスト・CI/CD統合 | Playwright MCP |
 | クロスブラウザ検証 | Playwright MCP |
-| リアルタイムデバッグ | ChromeDevTools MCP |
+| リアルタイムデバッグ | Puppeteer MCP |
 
 ### 重要な注意点
 
 - **Xサーバ不要**: LinuxホストにXサーバがインストールされていなくても、両ツールともヘッドレスモードで動作
-- **ポート範囲**: ChromeDevTools MCPは9222～9229の範囲で動作（config.jsonで設定）
+- **ポート範囲**: Puppeteer MCPは9222～9229の範囲で動作（config.jsonで設定）
 - **並行利用**: 両ツールは同時に使用可能（異なるユースケースで併用可）
-- **ツール検索**: `ToolSearch "chrome-devtools"` または `ToolSearch "playwright"` で利用可能なツールを検索
+- **ツール検索**: `ToolSearch "puppeteer"` または `ToolSearch "playwright"` で利用可能なツールを検索
 
 ### 推奨ワークフロー
 
-1. **開発・デバッグフェーズ**: ChromeDevTools MCPで手動操作と併用しながら検証
+1. **開発・デバッグフェーズ**: Puppeteer MCPで手動操作と併用しながら検証
 2. **テスト自動化フェーズ**: Playwrightで自動テストスクリプト作成
 3. **CI/CD統合フェーズ**: PlaywrightテストをGitHub Actionsに組み込み
 

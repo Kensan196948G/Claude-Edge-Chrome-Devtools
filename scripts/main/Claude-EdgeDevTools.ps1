@@ -147,6 +147,36 @@ function Update-RecentProjects {
     $historyObj | ConvertTo-Json -Depth 3 | Out-File -FilePath $HistoryPath -Encoding UTF8 -Force
 }
 
+# ログファイルをステータス別フォルダに移動
+function Move-LogToStatusFolder {
+    param(
+        [string]$LogPath,
+        [string]$LogRootDir,
+        [int]$ExitCode,
+        [bool]$IsError = $false
+    )
+
+    if (-not $LogPath -or -not (Test-Path $LogPath)) { return }
+
+    $Status = if ($IsError -or $ExitCode -ne 0) { "failure" } else { "success" }
+    $TargetDir = Join-Path $LogRootDir $Status
+
+    if (-not (Test-Path $TargetDir)) {
+        New-Item -ItemType Directory -Path $TargetDir -Force | Out-Null
+    }
+
+    $FileName = Split-Path $LogPath -Leaf
+    $NewFileName = $FileName -replace '\.log$', "-${Status}.log"
+    $NewPath = Join-Path $TargetDir $NewFileName
+
+    try {
+        Move-Item -Path $LogPath -Destination $NewPath -Force
+        Write-Host "📝 ログ保存: $Status/$NewFileName" -ForegroundColor Gray
+    } catch {
+        Write-Warning "ログ移動失敗（元の場所に残します）: $_"
+    }
+}
+
 # ===== グローバル変数 (クリーンアップ用) =====
 $Global:BrowserProcess = $null
 $Global:DevToolsPort = $null
@@ -181,6 +211,23 @@ trap {
     # ログパス表示（エラー発生時）
     if ($LogPath) {
         Write-Host "`n📄 詳細ログ: $LogPath" -ForegroundColor Cyan
+
+        # エラー時のログ移動
+        try {
+            Stop-Transcript -ErrorAction SilentlyContinue
+
+            if ($Config -and $Config.logging) {
+                $LogRootDir = if ([System.IO.Path]::IsPathRooted($Config.logging.logDir)) {
+                    $Config.logging.logDir
+                } else {
+                    Join-Path $RootDir $Config.logging.logDir
+                }
+
+                Move-LogToStatusFolder -LogPath $LogPath -LogRootDir $LogRootDir -ExitCode 1 -IsError $true
+            }
+        } catch {
+            # 移動失敗時は元の場所に残す
+        }
     }
 
     # Linux側ポートクリーンアップ（BatchMode=yesでパスワード要求を防止）
@@ -210,17 +257,48 @@ if (Test-Path $ConfigPath) {
     Write-Error "❌ 設定ファイルが見つかりません: $ConfigPath"
 }
 
-# 古いログファイルクリーンアップ
-if ($Config.logging -and $Config.logging.keepDays -gt 0) {
+# 古いログファイルクリーンアップ（成功/失敗別 + レガシー）
+if ($Config.logging -and $Config.logging.enabled) {
     try {
-        $LogDirPath = $ExecutionContext.InvokeCommand.ExpandString($Config.logging.logDir)
-        $CutoffDate = (Get-Date).AddDays(-$Config.logging.keepDays)
+        $LogRootDir = if ([System.IO.Path]::IsPathRooted($Config.logging.logDir)) {
+            $Config.logging.logDir
+        } else {
+            Join-Path $RootDir $Config.logging.logDir
+        }
 
-        Get-ChildItem -Path $LogDirPath -Filter "${LogPrefix}*.log" -File |
-            Where-Object { $_.LastWriteTime -lt $CutoffDate } |
-            Remove-Item -Force -ErrorAction SilentlyContinue
+        # success/failure/archiveディレクトリ作成
+        @('success', 'failure', 'archive') | ForEach-Object {
+            $dir = Join-Path $LogRootDir $_
+            if (-not (Test-Path $dir)) {
+                New-Item -ItemType Directory -Path $dir -Force | Out-Null
+            }
+        }
 
-        Write-Host "🧹 古いログファイルをクリーンアップしました ($($Config.logging.keepDays)日以前)" -ForegroundColor Gray
+        # 成功ログクリーンアップ
+        if ($Config.logging.successKeepDays -gt 0) {
+            $cutoff = (Get-Date).AddDays(-$Config.logging.successKeepDays)
+            Get-ChildItem (Join-Path $LogRootDir "success") -Filter "*-success.log" -ErrorAction SilentlyContinue |
+                Where-Object { $_.LastWriteTime -lt $cutoff } |
+                Remove-Item -Force -ErrorAction SilentlyContinue
+        }
+
+        # 失敗ログクリーンアップ
+        if ($Config.logging.failureKeepDays -gt 0) {
+            $cutoff = (Get-Date).AddDays(-$Config.logging.failureKeepDays)
+            Get-ChildItem (Join-Path $LogRootDir "failure") -Filter "*-failure.log" -ErrorAction SilentlyContinue |
+                Where-Object { $_.LastWriteTime -lt $cutoff } |
+                Remove-Item -Force -ErrorAction SilentlyContinue
+        }
+
+        # レガシーログクリーンアップ（TEMP フォルダ）
+        if ($Config.logging.legacyKeepDays -gt 0) {
+            $cutoff = (Get-Date).AddDays(-$Config.logging.legacyKeepDays)
+            Get-ChildItem $env:TEMP -Filter "${LogPrefix}*.log" -ErrorAction SilentlyContinue |
+                Where-Object { $_.LastWriteTime -lt $cutoff } |
+                Remove-Item -Force -ErrorAction SilentlyContinue
+        }
+
+        Write-Host "🧹 ログクリーンアップ完了（成功: $($Config.logging.successKeepDays)日、失敗: $($Config.logging.failureKeepDays)日）" -ForegroundColor Gray
     } catch {
         Write-Warning "ログクリーンアップに失敗: $_"
     }
@@ -820,18 +898,19 @@ export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 
 ## 【ブラウザ自動化ツール使い分けガイド】
 
-このプロジェクトではブラウザ自動化に **ChromeDevTools MCP** と **Playwright MCP** の2つが利用可能です。
+このプロジェクトではブラウザ自動化に **Puppeteer MCP** と **Playwright MCP** の2つが利用可能です。
 以下のガイドラインに従って適切なツールを選択してください。
 
-### ChromeDevTools MCP を使用すべき場合
+### Puppeteer MCP を使用すべき場合
 
-**状況**：既存のブラウザインスタンスに接続してデバッグ・検証を行う場合
+**状況**：Windows側のブラウザインスタンスに接続してデバッグ・検証を行う場合
 
 **特徴**：
 - Windows側で起動済みのEdge/Chromeブラウザに接続（SSHポートフォワーディング経由）
-- リアルタイムのDevTools Protocolアクセス
+- DevTools Protocol経由のリアルタイムアクセス
 - 既存のユーザーセッション・Cookie・ログイン状態を利用可能
 - 手動操作との併用が容易（開発者が手動で操作したブラウザをそのままデバッグ）
+- Node.js Puppeteer APIの全機能利用可能（待機、リトライ、複雑な操作シーケンス）
 
 **適用例**：
 - ログイン済みのWebアプリをデバッグ（セッション情報を再現する必要がない）
@@ -840,6 +919,7 @@ export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 - DOM要素の動的変更を追跡・検証
 - パフォーマンス計測（Navigation Timing、Resource Timing等）
 - 手動操作とスクリプト操作を交互に実行する検証作業
+- 複雑な操作フロー（ドラッグ&ドロップ、複数タブ操作等）
 
 **接続確認方法**：
 \`\`\`bash
@@ -854,14 +934,11 @@ curl -s http://127.0.0.1:\${MCP_CHROME_DEBUG_PORT}/json/list | jq '.'
 \`\`\`
 
 **利用可能なMCPツール**：
-- \`mcp__chrome-devtools__navigate_page\`: ページ遷移
-- \`mcp__chrome-devtools__click\`: 要素クリック
-- \`mcp__chrome-devtools__fill\`: フォーム入力
-- \`mcp__chrome-devtools__evaluate_script\`: JavaScriptコード実行
-- \`mcp__chrome-devtools__take_screenshot\`: スクリーンショット取得
-- \`mcp__chrome-devtools__get_console_message\`: コンソールログ取得
-- \`mcp__chrome-devtools__list_network_requests\`: ネットワークリクエスト一覧
-- （その他、\`mcp__chrome-devtools__*\` で利用可能なツールを検索）
+- \`mcp__plugin_puppeteer_puppeteer__navigate\`: ページ遷移
+- \`mcp__plugin_puppeteer_puppeteer__click\`: 要素クリック
+- \`mcp__plugin_puppeteer_puppeteer__evaluate\`: JavaScriptコード実行
+- \`mcp__plugin_puppeteer_puppeteer__screenshot\`: スクリーンショット取得
+- （その他、\`ToolSearch "puppeteer"\` で検索）
 
 ### Playwright MCP を使用すべき場合
 
@@ -901,7 +978,7 @@ curl -s http://127.0.0.1:\${MCP_CHROME_DEBUG_PORT}/json/list | jq '.'
 
 \`\`\`
 既存ブラウザの状態（ログイン・Cookie等）を利用したい？
-├─ YES → ChromeDevTools MCP
+├─ YES → Puppeteer MCP
 │         （Windows側ブラウザに接続、環境変数 MCP_CHROME_DEBUG_PORT 使用）
 │
 └─ NO  → 以下をさらに判断
@@ -909,23 +986,23 @@ curl -s http://127.0.0.1:\${MCP_CHROME_DEBUG_PORT}/json/list | jq '.'
           ├─ 自動テスト・CI/CD統合？ → Playwright MCP
           ├─ スクレイピング？ → Playwright MCP
           ├─ クロスブラウザ検証？ → Playwright MCP
-          └─ 手動操作との併用が必要？ → ChromeDevTools MCP
+          └─ 手動操作との併用が必要？ → Puppeteer MCP
 \`\`\`
 
 ### 注意事項
 
 1. **Xサーバ不要（重要）**：LinuxホストにXサーバがインストールされていなくても、両ツールとも動作します
-   - **ChromeDevTools MCP**: Windows側のブラウザに接続するため、Linux側にXサーバ不要（SSHポートフォワーディング経由）
+   - **Puppeteer MCP**: Windows側のブラウザに接続するため、Linux側にXサーバ不要（SSHポートフォワーディング経由）
    - **Playwright MCP**: Linux側でヘッドレスブラウザを起動するため、Xサーバ不要
    - ⚠️ **選択基準はXサーバの有無ではありません**。既存ブラウザ（ログイン状態等）を使うか、クリーンな環境かで判断してください
-2. **ポート範囲**：ChromeDevTools MCPは9222～9229の範囲で動作（config.jsonで設定）
+2. **ポート範囲**：Puppeteer MCPは9222～9229の範囲で動作（config.jsonで設定）
 3. **並行利用**：両ツールは同時に使用可能（異なるユースケースで併用可）
-4. **ツール検索**：利用可能なツールを確認するには \`ToolSearch\` を使用してキーワード検索（例：\`ToolSearch "chrome-devtools screenshot"\`）
-5. **ChromeDevTools 優先原則**：ユーザーがブラウザ操作を依頼した場合、**既存のWindows側ブラウザ（ChromeDevTools MCP）を優先使用**してください。Playwrightは自動テスト・スクレイピング・クリーンな環境が必要な場合のみ使用
+4. **ツール検索**：利用可能なツールを確認するには \`ToolSearch\` を使用してキーワード検索（例：\`ToolSearch "puppeteer screenshot"\`）
+5. **Puppeteer 優先原則**：ユーザーがブラウザ操作を依頼した場合、**既存のWindows側ブラウザ（Puppeteer MCP）を優先使用**してください。Playwrightは自動テスト・スクレイピング・クリーンな環境が必要な場合のみ使用
 
 ### 推奨ワークフロー
 
-1. **開発・デバッグフェーズ**：ChromeDevTools MCPで手動操作と併用しながら検証
+1. **開発・デバッグフェーズ**：Puppeteer MCPで手動操作と併用しながら検証
 2. **テスト自動化フェーズ**：Playwrightで自動テストスクリプト作成
 3. **CI/CD統合フェーズ**：PlaywrightテストをGitHub Actionsに組み込み
 
@@ -962,6 +1039,67 @@ curl -s http://127.0.0.1:\${MCP_CHROME_DEBUG_PORT}/json/list | jq '.'
 4. タスクの規模・性質に応じて、SubAgent（軽量・単一セッション内）と
    Agent Teams（重量・マルチインスタンス）を適切に使い分けてください。
    判断に迷う場合は私に確認してください。
+
+## 【Claude × Codex 開発体制】
+
+### 基本思想
+このセッションは **Claude（開発指揮官）× Codex（実装ドライバー）** のペアプロ体制で動作します。
+
+### 🧠 Claude = 開発指揮官（CTO + PM + アーキテクト）
+
+**統治する能力群（開発OSレベル）:**
+- SubAgents / Agent Teams — 並列・分散実行の指揮
+- Hooks — イベント駆動の自動化制御
+- WorkTree — 並列ブランチ管理
+- MCP群 — 外部ツール・サービス統合
+- Memory群（CLAUDE.md + MEMORY.md + claude-mem + Memory MCP）— 知識の永続化と伝播
+
+**担当領域:**
+| 作業 | 詳細 |
+|------|------|
+| 要件分析・設計判断 | アーキテクチャ設計、トレードオフ評価 |
+| コードレビュー・統合 | Codex 生成コードのレビューとファイルへの書き込み |
+| ファイル操作・git | Read/Edit/Write/Bash による直接操作 |
+| テスト実行・CI確認 | Bash によるテスト実行と結果判定 |
+| オーケストレーション | SubAgents / Agent Teams への指示と統合 |
+| 人間への確認・報告 | CLAUDE.md 第4条に基づく意思決定の委譲 |
+
+### 🤖 Codex = 実装ドライバー（複数の実装担当エンジニア）
+
+**特化能力:**
+- 高速コード生成（関数・クラス・モジュール単位）
+- 定型コードの大量変換・リファクタリング
+- 局所最適化（アルゴリズム改善、型付け強化等）
+- threadId を使った継続的なセッション管理
+
+**MCPツール:**
+- `mcp__codex__codex`: 新規セッションでコード生成 → threadId を保存
+- `mcp__codex__codex_reply`: threadId を使って同じコンテキストで継続
+
+### 🔁 シナリオ別ワークフロー
+
+**新機能実装:**
+1. Claude: 要件整理・既存コード調査（Read/Grep）
+2. Claude → Codex: 仕様＋コンテキストを送信（`mcp__codex__codex`）
+3. Codex: コード生成 → threadId を保存
+4. Claude: レビュー後にファイルへ書き込み（Edit/Write）
+
+**バグ修正:**
+1. Claude: バグ箇所特定（Grep/Read）
+2. Claude → Codex: バグ箇所＋エラー情報を送信
+3. Codex: 修正パッチ生成
+4. Claude: Edit で適用 → テスト実行
+
+**大規模リファクタリング:**
+1. Claude: 計画立案 → **人間へ承認取得**（CLAUDE.md 第4条）
+2. Claude → Codex: ファイルごとに依頼（threadId で継続）
+3. Claude: 全変更後にlint・テスト確認
+
+### ⚠️ 運用原則
+- OPENAI_API_KEY 未設定時は Claude 単独で対応（Codex 依存なし）
+- Codex 生成コードは **必ずレビューしてからファイルに書き込む**（自動書き込み禁止）
+- 大規模変更は CLAUDE.md 第4条に従い人間の承認必須
+- ToolSearch "codex" でツールの可用性を随時確認
 INITPROMPTEOF
 )
 
@@ -990,6 +1128,19 @@ done
 # 環境変数を設定
 export CLAUDE_CHROME_DEBUG_PORT=${PORT}
 export MCP_CHROME_DEBUG_PORT=${PORT}
+
+# Puppeteer MCP: 既存ブラウザへの接続設定
+echo "🔌 既存ブラウザへの接続準備..."
+WS_ENDPOINT=$(curl -s http://127.0.0.1:${PORT}/json/version 2>/dev/null | jq -r '.webSocketDebuggerUrl' 2>/dev/null)
+
+if [ -n "$WS_ENDPOINT" ] && [ "$WS_ENDPOINT" != "null" ]; then
+  echo "✅ WebSocketエンドポイント取得成功: $WS_ENDPOINT"
+  export PUPPETEER_LAUNCH_OPTIONS="{\\\"browserWSEndpoint\\\": \\\"${WS_ENDPOINT}\\\"}"
+  echo "   Puppeteer MCPは既存ブラウザに接続します"
+else
+  echo "⚠️  既存ブラウザが見つかりません。Puppeteerは新規ブラウザを起動します。"
+  export PUPPETEER_LAUNCH_OPTIONS="{\\\"headless\\\": false, \\\"timeout\\\": 30000}"
+fi
 
 # Agent Teams オーケストレーション有効化
 export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
@@ -1334,13 +1485,22 @@ Write-Host ""
 $EscapedLinuxBaseForSSH = Escape-SSHArgument $LinuxBase
 $EscapedProjectNameForSSH = Escape-SSHArgument $ProjectName
 ssh -t -o ControlMaster=no -o ControlPath=none -R "${DevToolsPort}:127.0.0.1:${DevToolsPort}" $LinuxHost "cd $EscapedLinuxBaseForSSH/$EscapedProjectNameForSSH && ./run-claude.sh"
+$SSHExitCode = $LASTEXITCODE
 
 # ===== ログ記録終了 =====
 if ($LogPath) {
     try {
         Stop-Transcript
-        Write-Host "`n📝 ログ記録終了: $LogPath" -ForegroundColor Gray
+
+        # ログをステータス別フォルダに移動
+        $LogRootDir = if ([System.IO.Path]::IsPathRooted($Config.logging.logDir)) {
+            $Config.logging.logDir
+        } else {
+            Join-Path $RootDir $Config.logging.logDir
+        }
+
+        Move-LogToStatusFolder -LogPath $LogPath -LogRootDir $LogRootDir -ExitCode $SSHExitCode -IsError $false
     } catch {
-        # Transcript未開始の場合はエラーを無視
+        Write-Warning "ログ記録終了処理エラー: $_"
     }
 }
