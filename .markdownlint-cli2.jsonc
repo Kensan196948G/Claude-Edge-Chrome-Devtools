@@ -1,5 +1,5 @@
 {
-  "ignorePatterns": [
+  "ignores": [
     "FINAL-SUMMARY.md",
     "GEMINI.md",
     "IMPLEMENTATION-SUMMARY.md",

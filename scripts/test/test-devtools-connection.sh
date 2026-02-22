@@ -50,7 +50,7 @@ print_info "1. 基本接続確認"
 echo "   エンドポイント: http://127.0.0.1:${PORT}/json/version"
 echo ""
 
-if ! curl -sf --connect-timeout 3 http://127.0.0.1:${PORT}/json/version > /dev/null 2>&1; then
+if ! curl -sf --connect-timeout 3 "http://127.0.0.1:${PORT}/json/version" > /dev/null 2>&1; then
     print_error "接続失敗 - DevToolsポート ${PORT} が応答していません"
     echo ""
     echo "以下を確認してください："
@@ -66,7 +66,7 @@ echo ""
 
 # ===== 2. バージョン情報取得 =====
 print_info "2. バージョン情報"
-VERSION_JSON=$(curl -s http://127.0.0.1:${PORT}/json/version)
+VERSION_JSON=$(curl -s "http://127.0.0.1:${PORT}/json/version")
 
 if command -v jq &> /dev/null; then
     echo "$VERSION_JSON" | jq '.'
@@ -92,7 +92,7 @@ echo ""
 
 # ===== 3. タブ一覧取得 =====
 print_info "3. 開いているタブ一覧"
-TABS_JSON=$(curl -s http://127.0.0.1:${PORT}/json/list)
+TABS_JSON=$(curl -s "http://127.0.0.1:${PORT}/json/list")
 
 if command -v jq &> /dev/null; then
     TAB_COUNT=$(echo "$TABS_JSON" | jq 'length')
