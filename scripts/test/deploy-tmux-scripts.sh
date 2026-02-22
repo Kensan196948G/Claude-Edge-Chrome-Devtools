@@ -7,6 +7,13 @@ set -euo pipefail
 LINUX_HOST="kensan@kensan1969"
 LINUX_BASE="/mnt/LinuxHDD"
 PROJECT_NAME="${1:?ERROR: PROJECT_NAME が指定されていません}"
+
+# PROJECT_NAME バリデーション（英数字・ハイフン・アンダースコア・ドットのみ許可）
+if [[ ! "${PROJECT_NAME}" =~ ^[a-zA-Z0-9_.-]+$ ]]; then
+    echo "ERROR: PROJECT_NAME に使用できない文字が含まれています: ${PROJECT_NAME}" >&2
+    exit 1
+fi
+
 REMOTE_BASE="${LINUX_BASE}/${PROJECT_NAME}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TMUX_SRC="${SCRIPT_DIR}/../tmux"
@@ -42,7 +49,7 @@ transfer_file() {
     local filename
     filename="$(basename "${local_path}")"
 
-    if base64 < "${local_path}" | ssh "${LINUX_HOST}" "base64 -d > '${remote_path}'" 2>/dev/null; then
+    if base64 < "${local_path}" | ssh "${LINUX_HOST}" "base64 -d > '${remote_path}'"; then
         echo "  OK ${filename}"
         SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
         return 0
