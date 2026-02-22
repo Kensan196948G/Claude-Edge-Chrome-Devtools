@@ -37,11 +37,11 @@ echo "✅ Bun: $(bun --version)"
 
 # .mcp.json バックアップ
 if [ -f "$MCP_CONFIG" ]; then
-    cp "$MCP_CONFIG" "$MCP_BACKUP"
+    sudo cp "$MCP_CONFIG" "$MCP_BACKUP"
     echo "✅ 既存の .mcp.json をバックアップ: $(basename "$MCP_BACKUP")"
 else
     echo "ℹ️  .mcp.json が存在しません。新規作成します。"
-    echo '{"mcpServers":{}}' > "$MCP_CONFIG"
+    echo '{"mcpServers":{}}' | sudo tee "$MCP_CONFIG" > /dev/null
 fi
 
 # GitHub Token デコード
@@ -172,8 +172,8 @@ for server_name in "${!MCP_SERVERS[@]}"; do
     fi
 done
 
-# 更新された設定を保存
-echo "$CURRENT_CONFIG" | jq '.' > "$MCP_CONFIG"
+# 更新された設定を保存 (CIFS マウント対応: sudo tee を使用)
+echo "$CURRENT_CONFIG" | jq '.' | sudo tee "$MCP_CONFIG" > /dev/null
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
