@@ -1767,8 +1767,8 @@ echo "🔧 リモートセットアップ開始..."
 # 0. プロジェクトディレクトリの書き込み権限確保（passwordless sudo）
 # ============================================================
 echo "🔑 プロジェクトディレクトリ権限設定中..."
-sudo mkdir -p "`${LINUX_PATH}"
-sudo chown -R "`${USER}":"`${USER}" "`${LINUX_PATH}"
+sudo mkdir -p "`${PROJECT_DIR}"
+sudo chown -R "`${USER}":"`${USER}" "`${PROJECT_DIR}"
 echo "✅ 権限設定完了"
 
 # ============================================================
@@ -1907,7 +1907,7 @@ if ($LASTEXITCODE -ne 0) {
 
 # run-claude.sh を個別転送（stdin パイプ方式: コマンドライン長制限回避）
 Write-Host "📝 run-claude.sh を転送中..."
-$EncodedRunClaude | ssh $LinuxHost "tr -d '\r' | base64 -d > /tmp/run-claude-tmp.sh && chmod +x /tmp/run-claude-tmp.sh && sudo cp -f /tmp/run-claude-tmp.sh $EscapedLinuxPath && rm /tmp/run-claude-tmp.sh"
+$EncodedRunClaude | ssh $LinuxHost "tr -d '\r' | base64 -d > /tmp/run-claude-tmp.sh && chmod +x /tmp/run-claude-tmp.sh && ([ -d $EscapedLinuxPath ] && sudo rm -rf $EscapedLinuxPath || true) && sudo cp -f /tmp/run-claude-tmp.sh $EscapedLinuxPath && rm /tmp/run-claude-tmp.sh"
 if ($LASTEXITCODE -ne 0) {
     Write-Host "❌ run-claude.sh 転送に失敗しました (終了コード: $LASTEXITCODE)" -ForegroundColor Red
     exit 1
