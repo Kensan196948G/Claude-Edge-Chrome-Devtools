@@ -30,6 +30,7 @@ if ! command -v bun &>/dev/null; then
     echo "📦 Bun をインストール中..."
     curl -fsSL https://bun.sh/install | bash
     export PATH="$HOME/.bun/bin:$PATH"
+    # shellcheck disable=SC2016
     echo 'export PATH="$HOME/.bun/bin:$PATH"' >> ~/.bashrc
 fi
 echo "✅ Bun: $(bun --version)"
@@ -37,7 +38,7 @@ echo "✅ Bun: $(bun --version)"
 # .mcp.json バックアップ
 if [ -f "$MCP_CONFIG" ]; then
     cp "$MCP_CONFIG" "$MCP_BACKUP"
-    echo "✅ 既存の .mcp.json をバックアップ: $(basename $MCP_BACKUP)"
+    echo "✅ 既存の .mcp.json をバックアップ: $(basename "$MCP_BACKUP")"
 else
     echo "ℹ️  .mcp.json が存在しません。新規作成します。"
     echo '{"mcpServers":{}}' > "$MCP_CONFIG"
@@ -162,12 +163,12 @@ for server_name in "${!MCP_SERVERS[@]}"; do
     # 既存チェック
     if echo "$CURRENT_CONFIG" | jq -e ".mcpServers[\"$server_name\"]" >/dev/null 2>&1; then
         echo "⏭️  $server_name (既に設定済み)"
-        ((SKIPPED_COUNT++))
+        SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
     else
         echo "➕ $server_name を追加中..."
         SERVER_CONFIG="${MCP_SERVERS[$server_name]}"
         CURRENT_CONFIG=$(echo "$CURRENT_CONFIG" | jq ".mcpServers[\"$server_name\"] = $SERVER_CONFIG")
-        ((ADDED_COUNT++))
+        ADDED_COUNT=$((ADDED_COUNT + 1))
     fi
 done
 

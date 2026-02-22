@@ -35,6 +35,9 @@ echo.
 echo  [Batch Operations]
 echo  9. Launch Multiple Projects
 echo.
+echo  [tmux Dashboard]
+echo  10. tmux Dashboard Setup / Diagnostics
+echo.
 echo  0. Exit
 echo.
 echo ===============================================
@@ -85,6 +88,10 @@ if "%choice%"=="8" (
 )
 if "%choice%"=="9" (
     call :launch_multiple
+    goto menu
+)
+if "%choice%"=="10" (
+    call :tmux_dashboard
     goto menu
 )
 if "%choice%"=="0" (
@@ -267,6 +274,174 @@ echo Press any key to continue...
 pause >nul
 
 pwsh -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\main\Claude-ChromeDevTools-Final.ps1"
+
+echo.
+pause
+goto :eof
+
+
+:tmux_dashboard
+cls
+echo.
+echo ===============================================
+echo  tmux Dashboard Setup / Diagnostics
+echo ===============================================
+echo.
+echo  1. Check tmux installation status (remote)
+echo  2. Install/update tmux (remote)
+echo  3. Test dashboard layout (remote)
+echo  4. Show tmux configuration
+echo.
+echo  0. Return to main menu
+echo.
+echo ===============================================
+set /p "tmux_choice=Enter number: "
+
+if "%tmux_choice%"=="1" (
+    call :tmux_check
+    goto :tmux_dashboard
+)
+if "%tmux_choice%"=="2" (
+    call :tmux_install
+    goto :tmux_dashboard
+)
+if "%tmux_choice%"=="3" (
+    call :tmux_layout_test
+    goto :tmux_dashboard
+)
+if "%tmux_choice%"=="4" (
+    call :tmux_show_config
+    goto :tmux_dashboard
+)
+if "%tmux_choice%"=="0" (
+    goto :eof
+)
+echo.
+echo Invalid number.
+pause
+goto :tmux_dashboard
+
+
+:tmux_check
+cls
+echo.
+echo ===============================================
+echo  tmux Installation Status
+echo ===============================================
+echo.
+echo Checking remote Linux host...
+echo.
+
+pwsh -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$config = Get-Content '%~dp0config\config.json' -Raw | ConvertFrom-Json; " ^
+  "$host_name = $config.linuxHost; " ^
+  "Write-Host \"Host: $host_name\" -ForegroundColor Cyan; " ^
+  "ssh $host_name 'echo \"=== tmux version ===\"; tmux -V 2>/dev/null || echo \"tmux is NOT installed\"; echo \"\"; echo \"=== tmux sessions ===\"; tmux list-sessions 2>/dev/null || echo \"No active sessions\"; echo \"\"; echo \"=== tmux install path ===\"; which tmux 2>/dev/null || echo \"Not found in PATH\"'"
+
+echo.
+pause
+goto :eof
+
+
+:tmux_install
+cls
+echo.
+echo ===============================================
+echo  tmux Install / Update
+echo ===============================================
+echo.
+echo This will install or update tmux on the
+echo remote Linux host using the auto-install script.
+echo.
+echo Execute? (Y/N)
+set /p "tmux_confirm="
+
+if /i "%tmux_confirm%"=="Y" (
+    echo.
+    echo Running tmux-install.sh on remote host...
+    echo.
+    pwsh -NoProfile -ExecutionPolicy Bypass -Command ^
+      "$config = Get-Content '%~dp0config\config.json' -Raw | ConvertFrom-Json; " ^
+      "$host_name = $config.linuxHost; " ^
+      "$scriptPath = '%~dp0scripts\tmux\tmux-install.sh'; " ^
+      "$content = Get-Content $scriptPath -Raw; " ^
+      "$content = $content -replace \"`r`n\", \"`n\"; " ^
+      "$encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($content)); " ^
+      "ssh $host_name \"echo '$encoded' | base64 -d > /tmp/tmux-install.sh && chmod +x /tmp/tmux-install.sh && /tmp/tmux-install.sh\""
+    echo.
+) else (
+    echo.
+    echo Cancelled.
+)
+
+pause
+goto :eof
+
+
+:tmux_layout_test
+cls
+echo.
+echo ===============================================
+echo  tmux Dashboard Layout Test
+echo ===============================================
+echo.
+echo Available layouts:
+echo  1. default       (2 side panes)
+echo  2. review-team   (4 side panes, 2x2)
+echo  3. fullstack-dev (6 side panes, 3x2)
+echo  4. debug-team    (3 side panes)
+echo.
+set /p "layout_choice=Select layout (1-4): "
+
+set "layout_name=default"
+if "%layout_choice%"=="1" set "layout_name=default"
+if "%layout_choice%"=="2" set "layout_name=review-team"
+if "%layout_choice%"=="3" set "layout_name=fullstack-dev-team"
+if "%layout_choice%"=="4" set "layout_name=debug-team"
+
+echo.
+echo Testing layout: %layout_name%
+echo.
+
+pwsh -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$config = Get-Content '%~dp0config\config.json' -Raw | ConvertFrom-Json; " ^
+  "$host_name = $config.linuxHost; " ^
+  "Write-Host 'Layout file content:' -ForegroundColor Cyan; " ^
+  "Get-Content '%~dp0scripts\tmux\layouts\%layout_name%.conf' | Write-Host"
+
+echo.
+pause
+goto :eof
+
+
+:tmux_show_config
+cls
+echo.
+echo ===============================================
+echo  tmux Configuration
+echo ===============================================
+echo.
+
+pwsh -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$config = Get-Content '%~dp0config\config.json' -Raw | ConvertFrom-Json; " ^
+  "if ($config.tmux) { " ^
+  "  Write-Host 'tmux settings:' -ForegroundColor Cyan; " ^
+  "  Write-Host \"  Enabled:      $($config.tmux.enabled)\"; " ^
+  "  Write-Host \"  Auto Install: $($config.tmux.autoInstall)\"; " ^
+  "  Write-Host \"  Layout:       $($config.tmux.defaultLayout)\"; " ^
+  "  Write-Host ''; " ^
+  "  Write-Host 'Pane settings:' -ForegroundColor Cyan; " ^
+  "  $config.tmux.panes.PSObject.Properties | ForEach-Object { " ^
+  "    Write-Host \"  $($_.Name): enabled=$($_.Value.enabled), interval=$($_.Value.refreshInterval)s\" " ^
+  "  }; " ^
+  "  Write-Host ''; " ^
+  "  Write-Host 'Theme:' -ForegroundColor Cyan; " ^
+  "  $config.tmux.theme.PSObject.Properties | ForEach-Object { " ^
+  "    Write-Host \"  $($_.Name): $($_.Value)\" " ^
+  "  } " ^
+  "} else { " ^
+  "  Write-Host 'tmux section not found in config.json' -ForegroundColor Yellow " ^
+  "}"
 
 echo.
 pause

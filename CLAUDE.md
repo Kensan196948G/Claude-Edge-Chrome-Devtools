@@ -80,6 +80,7 @@ start.bat
 - Statusline設定の自動展開 (`.claude/statusline.sh` + `settings.json`)
 - **Claude Code グローバル設定の自動適用** (base64エンコーディング経由SSH転送)
 - **Agent Teams環境変数の自動設定**
+- **tmuxスクリプト群のbase64転送・配置** (12ファイル: ダッシュボード、ペインスクリプト、レイアウト設定)
 - `.mcp.json`の自動バックアップ
 
 #### run-claude.sh (動的生成)
@@ -88,6 +89,7 @@ start.bat
 - **詳細DevTools接続テスト** (バージョン情報、タブ一覧、WebSocketエンドポイント、Protocol version確認)
 - 初期プロンプト自動入力 (heredoc方式: `INIT_PROMPT=$(cat << 'INITPROMPTEOF' ... INITPROMPTEOF)`)
   - **ブラウザ自動化ツール使い分けガイド** (ChromeDevTools MCP vs Playwright)を含む
+- **tmuxダッシュボード起動** (`tmux.enabled` 時: `tmux-dashboard.sh` 経由でセッション作成、無効時: 従来の直接起動にフォールバック)
 - Claude Code自動再起動ループ
 
 #### config.json
@@ -103,6 +105,41 @@ start.bat
 - `claudeCode`: Claude Code設定の中央管理 (以下を含む)
   - `env`: 環境変数 (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`, `ENABLE_TOOL_SEARCH`等)
   - `settings`: UI/動作設定 (`language`, `outputStyle`, `alwaysThinkingEnabled`等)
+- `tmux`: tmuxダッシュボード設定 (以下を含む)
+  - `enabled`: tmux有効化フラグ (`true`/`false`)
+  - `autoInstall`: tmux自動インストール (`true`/`false`)
+  - `defaultLayout`: レイアウト (`"auto"` / `"default"` / `"review-team"` 等)
+  - `panes`: 各ペインの有効化・更新間隔設定
+  - `theme`: ステータスバー・ペインボーダーの配色
+
+#### tmux ダッシュボード (オプション機能)
+`config.json` の `tmux.enabled: true` で有効化。メインペインでClaude Codeを実行しつつ、サイドペインでリアルタイム監視を行う。
+
+**レイアウトエンジン** (`scripts/tmux/tmux-dashboard.sh`):
+- セッション名: `claude-{project}-{port}`（マルチプロジェクト対応）
+- Agent Teams テンプレートから自動レイアウト検出 (`tmux.defaultLayout: "auto"`)
+- SSH切断後のセッション復帰 (`tmux attach -t SESSION`)
+
+**レイアウト** (`scripts/tmux/layouts/`):
+
+| レイアウト | ペイン数 | 用途 |
+|-----------|---------|------|
+| `default` | 2 | チームなし・個人作業 |
+| `review-team` | 4 (2x2) | レビューチーム3名 |
+| `fullstack-dev-team` | 6 (3x2) | 開発チーム4名 |
+| `debug-team` | 3 | デバッグチーム3名 |
+
+**モニタリングペイン** (`scripts/tmux/panes/`):
+- `devtools-monitor.sh PORT` — DevTools接続監視 (5秒間隔、異常時ペイン赤表示)
+- `mcp-health-monitor.sh` — MCP健全性監視 (30秒間隔、異常時ペイン赤表示)
+- `git-status-monitor.sh` — Git状態監視 (10秒間隔)
+- `resource-monitor.sh` — CPU/メモリ/ディスク監視 (15秒間隔)
+- `agent-teams-monitor.sh` — Agent Teams状態監視 (5秒間隔)
+
+**Claude Code Skills** (`.claude/skills/`):
+- `tmux-ops` — tmux レイアウト切替・セッション管理・ペイン操作
+- `agent-teams-ops` — Agent Teams 作成・監視・シャットダウン
+- `devops-monitor` — DevTools接続診断・MCPヘルスチェック・リソース監視
 
 #### statusline.sh
 Claude Code Statusline表示スクリプト。以下を表示:
@@ -173,8 +210,15 @@ ssh -t -o ControlMaster=no -o ControlPath=none -R "${PORT}:127.0.0.1:${PORT}" $L
 - Claude Code内で `/statusline` コマンド実行
 - または Claude Code を再起動
 
+### tmuxダッシュボード問題
+- **tmuxが起動しない**: `tmux -V` でバージョン確認、`scripts/tmux/tmux-install.sh` で再インストール
+- **ペインが黒い/停止**: ペインを選択して `Ctrl-c` → スクリプトを手動実行
+- **レイアウトが崩れた**: `tmux kill-session -t claude-{project}-{port}` で再作成
+- **SSH切断後の復帰**: `tmux attach -t claude-{project}-{port}` でセッション再接続
+- **tmux無効で起動したい**: `config.json` で `tmux.enabled: false` に設定
+
 ### SSH接続エラー
-- `windows-dev` ホストへのSSHキーベース認証を確認
+- Linuxホスト（`<your-linux-host>`）へのSSHキーベース認証を確認
 - `~/.ssh/config` でホスト設定を確認
 
 ## ファイル構造
@@ -182,7 +226,7 @@ ssh -t -o ControlMaster=no -o ControlPath=none -R "${PORT}:127.0.0.1:${PORT}" $L
 ```
 Claude-EdgeChromeDevTools/
 ├── config/
-│   └── config.json                  # 中央集約設定 (claudeCodeセクション含む)
+│   └── config.json                  # 中央集約設定 (claudeCode + tmux セクション含む)
 ├── scripts/
 │   ├── main/
 │   │   ├── Claude-EdgeDevTools.ps1          # Edge版メインスクリプト
@@ -194,19 +238,40 @@ Claude-EdgeChromeDevTools/
 │   │   ├── test-edge.ps1                    # Edge接続テスト (Windows側)
 │   │   ├── test-chrome.ps1                  # Chrome接続テスト (Windows側)
 │   │   └── test-devtools-connection.sh      # DevTools接続テスト (Linux側、Xサーバ不要)
+│   ├── tmux/
+│   │   ├── tmux-dashboard.sh                # メインレイアウトエンジン
+│   │   ├── tmux-install.sh                  # tmux自動インストール
+│   │   ├── panes/
+│   │   │   ├── devtools-monitor.sh          # DevTools接続監視 (5秒)
+│   │   │   ├── mcp-health-monitor.sh        # MCPヘルス監視 (30秒)
+│   │   │   ├── git-status-monitor.sh        # Git状態監視 (10秒)
+│   │   │   ├── resource-monitor.sh          # リソース監視 (15秒)
+│   │   │   └── agent-teams-monitor.sh       # Agent Teams監視 (5秒)
+│   │   └── layouts/
+│   │       ├── default.conf                 # デフォルトレイアウト (2ペイン)
+│   │       ├── review-team.conf             # レビューチーム (4ペイン)
+│   │       ├── fullstack-dev-team.conf      # 開発チーム (6ペイン)
+│   │       ├── debug-team.conf              # デバッグチーム (3ペイン)
+│   │       └── custom.conf.template         # カスタムテンプレート
 │   └── statusline.sh                        # Claude Code Statuslineスクリプト
+├── .claude/
+│   └── skills/
+│       ├── tmux-ops/SKILL.md                # tmux操作スキル
+│       ├── agent-teams-ops/SKILL.md         # Agent Teams運用スキル
+│       └── devops-monitor/SKILL.md          # DevOps監視スキル
 ├── docs/
 │   ├── SystemAdministrator/         # システム管理者向けドキュメント (12ファイル)
 │   └── non-SystemAdministrator/     # 一般ユーザー向けドキュメント (6ファイル)
-├── start.bat                        # 対話型ランチャー
+├── start.bat                        # 対話型ランチャー (tmuxサブメニュー含む)
 ├── CLAUDE.md                        # Claude Code向けプロジェクト指示書
 └── GEMINI.md                        # プロジェクトドキュメント(日本語)
 ```
 
 ### 動的生成ファイル
-- `{プロジェクトルート}/run-claude.sh`: Claude Code起動スクリプト (heredoc INIT_PROMPT + Agent Teams env)
+- `{プロジェクトルート}/run-claude.sh`: Claude Code起動スクリプト (heredoc INIT_PROMPT + Agent Teams env + tmux対応)
 - `{プロジェクトルート}/.claude/statusline.sh`: プロジェクト固有Statusline (base64転送)
 - `{プロジェクトルート}/.claude/settings.json`: Claude Code設定 (base64転送)
+- `{プロジェクトルート}/scripts/tmux/`: tmuxスクリプト群 (base64転送、12ファイル)
 - `{プロジェクトルート}/.mcp.json.bak.*`: MCPバックアップ
 - `~/.claude/settings.json` (Linux): グローバル設定 (jqマージ自動更新)
 
@@ -221,10 +286,11 @@ Claude-EdgeChromeDevTools/
 ### Linux側
 - `claude` CLI
 - `curl`
-- `jq` (Statusline用 + グローバル設定マージ用、自動インストール試行)
+- `jq` (Statusline用 + グローバル設定マージ用 + MCPヘルスチェック用、自動インストール試行)
 - `fuser` (ポートクリーンアップ用)
 - `git` (Statusline Gitブランチ表示用)
 - `base64` (SSH経由スクリプト転送用、通常プリインストール済み)
+- `tmux` (ダッシュボード用、`tmux.autoInstall: true` で自動インストール試行)
 
 ## ブラウザ自動化ツール使い分けガイド
 

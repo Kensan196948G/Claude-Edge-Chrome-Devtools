@@ -1,0 +1,34 @@
+# ============================================================
+# custom.conf.template - ユーザーカスタマイズ用テンプレート
+# ============================================================
+# このファイルを custom.conf にコピーして自由にカスタマイズしてください。
+#
+# 使い方:
+#   cp custom.conf.template custom.conf
+#   # custom.conf を編集
+#
+# 各行の形式:
+#   PANE_NAME SPLIT_DIR SPLIT_PCT SCRIPT_NAME ARGS
+#
+# パラメータ:
+#   PANE_NAME  - ペインの識別名（任意の文字列）
+#   SPLIT_DIR  - 分割方向: h=水平(右に分割), v=垂直(下に分割)
+#   SPLIT_PCT  - 新ペインのサイズ割合(%)
+#   SCRIPT_NAME - scripts/tmux/panes/ 内のスクリプト名
+#   ARGS       - スクリプトへの引数（__PORT__ と __PROJECT__ は自動置換）
+#
+# 利用可能なモニタリングスクリプト:
+#   devtools-monitor.sh __PORT__    - DevTools接続監視
+#   mcp-health-monitor.sh           - MCPサーバーヘルス
+#   git-status-monitor.sh __PROJECT__ - Git状態監視
+#   resource-monitor.sh             - リソース使用量
+#   agent-teams-monitor.sh          - Agent Teams状態
+#
+# ============================================================
+# ↓ 以下をカスタマイズしてください
+
+# 右側にDevTools監視（全幅の30%）
+devtools h 30 devtools-monitor.sh __PORT__
+
+# 右側の下半分にGit状態監視
+git-status v 50 git-status-monitor.sh __PROJECT__
