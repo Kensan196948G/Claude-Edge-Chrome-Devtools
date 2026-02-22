@@ -36,6 +36,24 @@
       "includeCoAuthoredBy": true
     }
   },
+  "tmux": {
+    "enabled": true,
+    "autoInstall": true,
+    "defaultLayout": "auto",
+    "panes": {
+      "devtools":      { "enabled": true, "refreshInterval": 5 },
+      "mcpHealth":     { "enabled": true, "refreshInterval": 30 },
+      "gitStatus":     { "enabled": true, "refreshInterval": 10 },
+      "resourceUsage": { "enabled": true, "refreshInterval": 15 },
+      "agentTeams":    { "enabled": true, "refreshInterval": 5 },
+      "logTail":       { "enabled": false, "logFile": "", "lines": 50 }
+    },
+    "theme": {
+      "statusBarColor": "colour39",
+      "paneActiveColor": "colour154",
+      "paneBorderColor": "colour240"
+    }
+  },
   "mcp": {
     "enabled": true,
     "autoSetup": true,

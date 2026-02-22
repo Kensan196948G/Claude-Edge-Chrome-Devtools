@@ -784,6 +784,12 @@ set -euo pipefail
 PORT=__DEVTOOLS_PORT__
 RESTART_DELAY=3
 
+# tmux ダッシュボード設定
+TMUX_ENABLED=__TMUX_ENABLED__
+TMUX_LAYOUT="__TMUX_LAYOUT__"
+PROJECT_NAME="__PROJECT_NAME__"
+SCRIPTS_TMUX_DIR="__SCRIPTS_TMUX_DIR__"
+
 # 初期プロンプト（ヒアドキュメントで定義：バッククォートや二重引用符を安全に含む）
 INIT_PROMPT=$(cat << 'INITPROMPTEOF'
 以降、日本語で対応してください。
@@ -1302,6 +1308,29 @@ test_devtools_connection() {
 # 詳細テスト実行
 test_devtools_connection
 
+# === tmux ダッシュボード起動 ===
+# TMUX 環境変数が未設定 = tmux の外からの初回起動
+# → tmux-dashboard.sh へ exec（メインペインで run-claude.sh を再実行）
+# → 再実行時は TMUX 環境変数が設定済みなのでこのブロックをスキップ
+if [ "$TMUX_ENABLED" = "true" ] && [ -z "${TMUX:-}" ]; then
+    if command -v tmux &>/dev/null; then
+        DASHBOARD_SCRIPT="${SCRIPTS_TMUX_DIR}/tmux-dashboard.sh"
+        if [ -f "$DASHBOARD_SCRIPT" ] && [ -x "$DASHBOARD_SCRIPT" ]; then
+            echo ""
+            echo "🖥️  tmux ダッシュボード起動中..."
+            echo "   レイアウト: ${TMUX_LAYOUT}"
+            echo "   セッション: claude-${PROJECT_NAME}-${PORT}"
+            echo ""
+            exec "$DASHBOARD_SCRIPT" "$PROJECT_NAME" "$PORT" "$TMUX_LAYOUT" "cd $(pwd) && ./run-claude.sh"
+        else
+            echo "⚠️  tmux-dashboard.sh が見つかりません: ${DASHBOARD_SCRIPT}"
+            echo "   tmux なしで続行します..."
+        fi
+    else
+        echo "ℹ️  tmux がインストールされていません。通常モードで起動します。"
+    fi
+fi
+
 echo ""
 echo "🚀 Claude 起動 (port=${PORT})"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -1326,6 +1355,16 @@ echo "👋 終了しました"
 
 # ポート番号を置換
 $RunClaude = $RunClaude -replace '__DEVTOOLS_PORT__', $DevToolsPort
+
+# tmux 設定値を置換
+$TmuxEnabled = if ($Config.tmux -and $Config.tmux.enabled) { "true" } else { "false" }
+$TmuxLayout = if ($Config.tmux -and $Config.tmux.defaultLayout) { $Config.tmux.defaultLayout } else { "auto" }
+$TmuxScriptsDir = "$LinuxBase/$ProjectName/scripts/tmux"
+
+$RunClaude = $RunClaude -replace '__TMUX_ENABLED__', $TmuxEnabled
+$RunClaude = $RunClaude -replace '__TMUX_LAYOUT__', $TmuxLayout
+$RunClaude = $RunClaude -replace '__PROJECT_NAME__', $ProjectName
+$RunClaude = $RunClaude -replace '__SCRIPTS_TMUX_DIR__', $TmuxScriptsDir
 
 # CRLF を LF に変換
 $RunClaude = $RunClaude -replace "`r`n", "`n"
@@ -1455,6 +1494,75 @@ if ($McpEnabled) {
     }
 }
 
+# === tmux スクリプト base64 エンコーディング ===
+$TmuxAutoInstall = if ($Config.tmux -and $Config.tmux.autoInstall) { "true" } else { "false" }
+$EncodedTmuxScripts = @{}
+$TmuxSetupBlock = "echo 'ℹ️  tmux ダッシュボード無効'"
+
+if ($Config.tmux -and $Config.tmux.enabled) {
+    $TmuxBaseDir = Join-Path (Split-Path $PSScriptRoot -Parent) "tmux"
+
+    $TmuxFiles = @(
+        "tmux-dashboard.sh",
+        "tmux-install.sh",
+        "panes/devtools-monitor.sh",
+        "panes/mcp-health-monitor.sh",
+        "panes/git-status-monitor.sh",
+        "panes/resource-monitor.sh",
+        "panes/agent-teams-monitor.sh",
+        "layouts/default.conf",
+        "layouts/review-team.conf",
+        "layouts/fullstack-dev-team.conf",
+        "layouts/debug-team.conf",
+        "layouts/custom.conf.template"
+    )
+
+    foreach ($TmuxFile in $TmuxFiles) {
+        $TmuxFilePath = Join-Path $TmuxBaseDir $TmuxFile
+        if (Test-Path $TmuxFilePath) {
+            $TmuxContent = Get-Content $TmuxFilePath -Raw -Encoding UTF8
+            $TmuxContent = $TmuxContent -replace "`r`n", "`n"
+            $TmuxContent = $TmuxContent -replace "`r", "`n"
+            $EncodedTmuxScripts[$TmuxFile] = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($TmuxContent))
+        } else {
+            Write-Warning "tmux スクリプトが見つかりません: $TmuxFilePath"
+        }
+    }
+
+    # tmux ファイルデプロイ用 bash コマンドを事前生成
+    # (PowerShell変数を展開済みの文字列として組み立てることで、
+    #  @"..."@ ヒアストリング内での bash 変数エスケープ問題を回避)
+    $tmuxLines = @()
+    $tmuxLines += ""
+    $tmuxLines += "# === tmux スクリプト配置 ==="
+    $tmuxLines += 'echo "🖥️  tmux スクリプト配置中..."'
+    $tmuxLines += 'TMUX_BASE="' + "$EscapedLinuxBase/$EscapedProjectName/scripts/tmux" + '"'
+    $tmuxLines += 'mkdir -p "${TMUX_BASE}/panes"'
+    $tmuxLines += 'mkdir -p "${TMUX_BASE}/layouts"'
+
+    foreach ($entry in $EncodedTmuxScripts.GetEnumerator()) {
+        $tmuxLines += "echo '" + $entry.Value + "' | base64 -d > " + '"${TMUX_BASE}/' + $entry.Key + '"'
+    }
+
+    $tmuxLines += 'chmod +x "${TMUX_BASE}"/*.sh "${TMUX_BASE}/panes"/*.sh 2>/dev/null || true'
+
+    if ($TmuxAutoInstall -eq "true") {
+        $tmuxLines += ""
+        $tmuxLines += "# tmux 自動インストール"
+        $tmuxLines += 'if ! command -v tmux &>/dev/null; then'
+        $tmuxLines += '    echo "📦 tmux インストール中..."'
+        $tmuxLines += '    "${TMUX_BASE}/tmux-install.sh" || echo "⚠️  tmux インストールに失敗しました"'
+        $tmuxLines += 'else'
+        $tmuxLines += '    echo "✅ tmux インストール済み: $(tmux -V)"'
+        $tmuxLines += 'fi'
+    }
+
+    $tmuxLines += 'echo "✅ tmux スクリプト配置完了"'
+    $TmuxSetupBlock = $tmuxLines -join "`n"
+
+    Write-Host "✅ tmux スクリプト $($EncodedTmuxScripts.Count) 件エンコード完了" -ForegroundColor Green
+}
+
 # 統合リモートセットアップスクリプトを生成
 $McpBackupTimestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 $ConsolidatedSetupScript = @"
@@ -1479,6 +1587,8 @@ fi
 echo "📁 ディレクトリ作成中..."
 mkdir -p $EscapedLinuxBase/$EscapedProjectName/.claude
 mkdir -p ~/.claude
+
+$TmuxSetupBlock
 
 $(if ($statuslineEnabled -and $encodedStatusline) {@"
 # statusline.sh 転送と配置

@@ -87,6 +87,9 @@ temp/
 %USERPROFILE%/
 %TEMP%/
 
+# tmux 関連
+logs/tmux-monitor-*.log
+
 # 重複ディレクトリ
 config/config/
 *.backup-pre-puppeteer
