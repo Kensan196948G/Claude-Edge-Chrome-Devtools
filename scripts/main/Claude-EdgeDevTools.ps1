@@ -1564,14 +1564,14 @@ if ($Config.tmux -and $Config.tmux.enabled) {
     $tmuxLines += "# === tmux スクリプト配置 ==="
     $tmuxLines += 'echo "🖥️  tmux スクリプト配置中..."'
     $tmuxLines += 'TMUX_BASE="${LINUX_BASE}/${PROJECT_NAME}/scripts/tmux"'
-    $tmuxLines += 'mkdir -p "${TMUX_BASE}/panes"'
-    $tmuxLines += 'mkdir -p "${TMUX_BASE}/layouts"'
+    $tmuxLines += 'sudo mkdir -p "${TMUX_BASE}/panes"'
+    $tmuxLines += 'sudo mkdir -p "${TMUX_BASE}/layouts"'
 
     foreach ($entry in $EncodedTmuxScripts.GetEnumerator()) {
-        $tmuxLines += "echo '" + $entry.Value + "' | base64 -d > " + '"${TMUX_BASE}/' + $entry.Key + '"'
+        $tmuxLines += "echo '" + $entry.Value + "' | base64 -d | sudo tee " + '"${TMUX_BASE}/' + $entry.Key + '"' + ' > /dev/null'
     }
 
-    $tmuxLines += 'chmod +x "${TMUX_BASE}"/*.sh "${TMUX_BASE}/panes"/*.sh 2>/dev/null || true'
+    $tmuxLines += 'sudo chmod +x "${TMUX_BASE}"/*.sh "${TMUX_BASE}/panes"/*.sh 2>/dev/null || true'
 
     if ($TmuxAutoInstall -eq "true") {
         $tmuxLines += ""
@@ -1620,7 +1620,7 @@ echo "✅ 権限設定完了"
 
 # プロジェクトディレクトリ作成
 echo "📁 ディレクトリ作成中..."
-mkdir -p $EscapedLinuxBase/$EscapedProjectName/.claude
+sudo mkdir -p $EscapedLinuxBase/$EscapedProjectName/.claude
 mkdir -p ~/.claude
 
 $TmuxSetupBlock
@@ -1628,14 +1628,14 @@ $TmuxSetupBlock
 $(if ($statuslineEnabled -and $encodedStatusline) {@"
 # statusline.sh 転送と配置
 echo "📝 statusline.sh 配置中..."
-echo '$encodedStatusline' | base64 -d > $EscapedLinuxBase/$EscapedProjectName/.claude/statusline.sh
-chmod +x $EscapedLinuxBase/$EscapedProjectName/.claude/statusline.sh
+echo '$encodedStatusline' | base64 -d | sudo tee $EscapedLinuxBase/$EscapedProjectName/.claude/statusline.sh > /dev/null
+sudo chmod +x $EscapedLinuxBase/$EscapedProjectName/.claude/statusline.sh
 cp $EscapedLinuxBase/$EscapedProjectName/.claude/statusline.sh ~/.claude/statusline.sh
 echo "✅ statusline.sh 配置完了"
 
 # settings.json 転送
 echo "⚙️  settings.json 配置中..."
-echo '$encodedSettings' | base64 -d > $EscapedLinuxBase/$EscapedProjectName/.claude/settings.json
+echo '$encodedSettings' | base64 -d | sudo tee $EscapedLinuxBase/$EscapedProjectName/.claude/settings.json > /dev/null
 echo "✅ settings.json 配置完了"
 
 # グローバル設定更新
@@ -1649,7 +1649,7 @@ rm /tmp/update_global_settings.sh
 # .mcp.json バックアップ
 echo "📦 .mcp.json バックアップ中..."
 if [ -f $EscapedLinuxBase/$EscapedProjectName/.mcp.json ]; then
-    cp $EscapedLinuxBase/$EscapedProjectName/.mcp.json $EscapedLinuxBase/$EscapedProjectName/.mcp.json.bak.`${MCP_BACKUP_TIMESTAMP}
+    sudo cp $EscapedLinuxBase/$EscapedProjectName/.mcp.json $EscapedLinuxBase/$EscapedProjectName/.mcp.json.bak.`${MCP_BACKUP_TIMESTAMP}
     echo "✅ バックアップ完了: .mcp.json → .mcp.json.bak.`${MCP_BACKUP_TIMESTAMP}"
 else
     echo "ℹ️  .mcp.jsonが存在しません（初回起動の可能性）"

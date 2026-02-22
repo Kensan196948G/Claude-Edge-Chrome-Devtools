@@ -1716,14 +1716,14 @@ if ($Config.tmux -and $Config.tmux.enabled) {
     $tmuxLines += "# === tmux スクリプト配置 ==="
     $tmuxLines += 'echo "🖥️  tmux スクリプト配置中..."'
     $tmuxLines += 'TMUX_BASE="${LINUX_BASE}/${PROJECT_NAME}/scripts/tmux"'
-    $tmuxLines += 'mkdir -p "${TMUX_BASE}/panes"'
-    $tmuxLines += 'mkdir -p "${TMUX_BASE}/layouts"'
+    $tmuxLines += 'sudo mkdir -p "${TMUX_BASE}/panes"'
+    $tmuxLines += 'sudo mkdir -p "${TMUX_BASE}/layouts"'
 
     foreach ($entry in $EncodedTmuxScripts.GetEnumerator()) {
-        $tmuxLines += "echo '" + $entry.Value + "' | base64 -d > " + '"${TMUX_BASE}/' + $entry.Key + '"'
+        $tmuxLines += "echo '" + $entry.Value + "' | base64 -d | sudo tee " + '"${TMUX_BASE}/' + $entry.Key + '"' + ' > /dev/null'
     }
 
-    $tmuxLines += 'chmod +x "${TMUX_BASE}"/*.sh "${TMUX_BASE}/panes"/*.sh 2>/dev/null || true'
+    $tmuxLines += 'sudo chmod +x "${TMUX_BASE}"/*.sh "${TMUX_BASE}/panes"/*.sh 2>/dev/null || true'
 
     if ($TmuxAutoInstall -eq "true") {
         $tmuxLines += ""
@@ -1788,7 +1788,7 @@ fi
 # ============================================================
 # 2. .claude ディレクトリ作成
 # ============================================================
-mkdir -p "`${CLAUDE_DIR}"
+sudo mkdir -p "`${CLAUDE_DIR}"
 mkdir -p "`$HOME/.claude"
 
 $TmuxSetupBlock
@@ -1801,12 +1801,12 @@ if [ "`$STATUSLINE_ENABLED" = "true" ]; then
 
     # statusline.sh をデコードして配置
     STATUSLINE_DEST="`${CLAUDE_DIR}/statusline.sh"
-    echo '$EncodedStatusline' | base64 -d > "`${STATUSLINE_DEST}"
-    chmod +x "`${STATUSLINE_DEST}"
+    echo '$EncodedStatusline' | base64 -d | sudo tee "`${STATUSLINE_DEST}" > /dev/null
+    sudo chmod +x "`${STATUSLINE_DEST}"
 
     # settings.json をデコードして配置
     SETTINGS_DEST="`${CLAUDE_DIR}/settings.json"
-    echo '$EncodedSettings' | base64 -d > "`${SETTINGS_DEST}"
+    echo '$EncodedSettings' | base64 -d | sudo tee "`${SETTINGS_DEST}" > /dev/null
 
     # グローバルディレクトリにコピー
     cp "`${STATUSLINE_DEST}" ~/.claude/statusline.sh
@@ -1842,14 +1842,14 @@ fi
 # ============================================================
 echo ""
 echo "🪝 Hooks ディレクトリ作成中..."
-mkdir -p "`${CLAUDE_DIR}/hooks/lib"
+sudo mkdir -p "`${CLAUDE_DIR}/hooks/lib"
 echo "✅ Hooks ディレクトリ作成完了"
 
 # ============================================================
 # 4. .mcp.json バックアップ
 # ============================================================
 if [ -f "`${MCP_PATH}" ]; then
-    cp "`${MCP_PATH}" "`${MCP_BACKUP}"
+    sudo cp "`${MCP_PATH}" "`${MCP_BACKUP}"
     echo "✅ .mcp.json バックアップ完了: `${MCP_BACKUP}"
 else
     echo "ℹ️  .mcp.json が見つかりません"
