@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 setlocal enabledelayedexpansion
 
 rem If running as admin and not in Windows Terminal, relaunch in Windows Terminal
@@ -59,7 +60,7 @@ if "%choice%"=="1" (
     set "script_name=scripts\main\Claude-EdgeDevTools.ps1"
     set "fast_return=1"
     echo.
-    echo  tmux ダッシュボードを使用しますか? (Y/N) [Y]
+    echo  tmux ダッシュボードを使用しますか? Y/N [Y]
     set /p "use_tmux="
     if /i "!use_tmux!"=="N" (
         set "tmux_flag="
@@ -72,7 +73,7 @@ if "%choice%"=="2" (
     set "script_name=scripts\main\Claude-ChromeDevTools-Final.ps1"
     set "fast_return=1"
     echo.
-    echo  tmux ダッシュボードを使用しますか? (Y/N) [Y]
+    echo  tmux ダッシュボードを使用しますか? Y/N [Y]
     set /p "use_tmux="
     if /i "!use_tmux!"=="N" (
         set "tmux_flag="
@@ -521,7 +522,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -Command ^
   "$session = 'claude-!wt_project!-!wt_port!'; " ^
   "Write-Host \"Connecting to $h, session: $session\" -ForegroundColor Cyan; " ^
   "$wtExe = 'wezterm'; " ^
-  "if (!(Get-Command $wtExe -ErrorAction SilentlyContinue)) { " ^
+  "if (-not (Get-Command $wtExe -ErrorAction SilentlyContinue)) { " ^
   "  $wtExe = Join-Path $env:LOCALAPPDATA 'Programs\WezTerm\wezterm.exe'; " ^
   "} " ^
   "Start-Process $wtExe -ArgumentList 'ssh', $h, '--', 'bash', '-c', " ^
