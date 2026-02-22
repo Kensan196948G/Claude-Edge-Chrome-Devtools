@@ -102,6 +102,9 @@ fi
 # ============================================================
 # 新規セッションをデタッチ状態で作成（メインペイン = Claude Code）
 tmux new-session -d -s "$SESSION_NAME" -x 200 -y 50
+# WINDOW_MANUALSIZE フラグを確実に設定（tmux < 3.2 で new-session がフラグを設定しない場合の対策）
+# これにより split-window -l N% が "size missing" を返すバグを回避する
+tmux resize-window -t "$SESSION_NAME" -x 200 -y 50 2>/dev/null || true
 
 # ステータスバーのカスタマイズ
 tmux set-option -t "$SESSION_NAME" status on
@@ -127,11 +130,11 @@ for pane_def in "${PANE_DEFS[@]}"; do
         continue
     fi
 
-    # ペインを分割
+    # ペインを分割（-l N% は tmux 3.1+ 推奨構文、-p N は tmux 3.3a+ で非推奨）
     if [ "$split_dir" = "h" ]; then
-        tmux split-window -h -t "${SESSION_NAME}" -p "$split_pct"
+        tmux split-window -h -t "${SESSION_NAME}" -l "${split_pct}%"
     else
-        tmux split-window -v -t "${SESSION_NAME}" -p "$split_pct"
+        tmux split-window -v -t "${SESSION_NAME}" -l "${split_pct}%"
     fi
 
     PANE_INDEX=$((PANE_INDEX + 1))
