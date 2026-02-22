@@ -1880,12 +1880,12 @@ $RemoteSetupScript = $RemoteSetupScript -replace "`r", "`n"
 # Base64エンコード
 $EncodedRemoteScript = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($RemoteSetupScript))
 
-# 単一SSH呼び出しで実行
-ssh $LinuxHost "echo '$EncodedRemoteScript' | base64 -d > /tmp/remote_setup.sh && chmod +x /tmp/remote_setup.sh && /tmp/remote_setup.sh && rm /tmp/remote_setup.sh"
+# 単一SSH呼び出しで実行（stdin パイプ方式: コマンドライン長制限回避）
+$EncodedRemoteScript | ssh $LinuxHost "base64 -d > /tmp/remote_setup.sh && chmod +x /tmp/remote_setup.sh && /tmp/remote_setup.sh && rm /tmp/remote_setup.sh"
 
-# run-claude.sh を個別転送（コマンドライン長制限回避のため $RemoteSetupScript から分離）
+# run-claude.sh を個別転送（stdin パイプ方式: コマンドライン長制限回避）
 Write-Host "📝 run-claude.sh を転送中..."
-ssh $LinuxHost "echo '$EncodedRunClaude' | base64 -d > $EscapedLinuxPath && chmod +x $EscapedLinuxPath"
+$EncodedRunClaude | ssh $LinuxHost "base64 -d > $EscapedLinuxPath && chmod +x $EscapedLinuxPath"
 Write-Host "✅ run-claude.sh 転送完了"
 
 # Hooks ファイルを個別転送（コマンドライン長制限回避）
