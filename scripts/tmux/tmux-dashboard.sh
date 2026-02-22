@@ -119,7 +119,7 @@ tmux set-option -t "$SESSION_NAME" pane-border-style "fg=colour240"
 # ============================================================
 PANE_INDEX=0
 for pane_def in "${PANE_DEFS[@]}"; do
-    read -r pane_name split_dir split_pct script_name script_args <<< "$pane_def"
+    read -r _pane_name split_dir split_pct script_name script_args <<< "$pane_def"
 
     local_script="${PANES_DIR}/${script_name}"
     if [ ! -f "$local_script" ]; then
