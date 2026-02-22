@@ -1,7 +1,11 @@
 # Chrome DevTools Test Script
 $ErrorActionPreference = "Continue"
 
-$ChromeExe = "C:\Program Files\Google\Chrome\Application\chrome.exe"
+$RootDir = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+$ConfigPath = Join-Path $RootDir "config\config.json"
+$Config = if (Test-Path $ConfigPath) { Get-Content $ConfigPath -Raw | ConvertFrom-Json } else { $null }
+
+$ChromeExe = $Config?.chromeExe ?? "C:\Program Files\Google\Chrome\Application\chrome.exe"
 
 # ===== ポート自動選択 =====
 $AvailablePorts = @(9222, 9223)
@@ -23,7 +27,7 @@ if (-not $DevToolsPort) {
     exit 1
 }
 Write-Host "✅ 自動選択されたポート: $DevToolsPort"
-$ChromeProfile = "C:\ChromeDevTools-$DevToolsPort"
+$ChromeProfile = Join-Path ($Config?.browserProfileDir ?? "C:\") "ChromeDevTools-$DevToolsPort"
 
 Write-Host "Chrome DevTools Test Start"
 Write-Host "=========================="

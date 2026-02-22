@@ -599,7 +599,7 @@ Write-Host "✅ 使用ポート: $DevToolsPort (自動選択)"
 # ============================================================
 # ④ ブラウザ DevTools 起動（専用プロファイル + 事前設定）
 # ============================================================
-$BrowserProfile = "C:\DevTools-$SelectedBrowser-$DevToolsPort"
+$BrowserProfile = Join-Path ($Config.browserProfileDir ?? "C:\") "DevTools-$SelectedBrowser-$DevToolsPort"
 $ProcessName = if ($SelectedBrowser -eq "edge") { "msedge" } else { "chrome" }
 
 Write-Host "`n🌐 $BrowserName DevTools 起動準備..."

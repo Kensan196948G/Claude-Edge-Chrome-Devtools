@@ -1,7 +1,11 @@
 # Edge DevTools Test Script
 $ErrorActionPreference = "Continue"
 
-$EdgeExe = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+$RootDir = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+$ConfigPath = Join-Path $RootDir "config\config.json"
+$Config = if (Test-Path $ConfigPath) { Get-Content $ConfigPath -Raw | ConvertFrom-Json } else { $null }
+
+$EdgeExe = $Config?.edgeExe ?? "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 
 # ===== ポート自動選択 =====
 $AvailablePorts = @(9222, 9223)
@@ -23,7 +27,7 @@ if (-not $DevToolsPort) {
     exit 1
 }
 Write-Host "✅ 自動選択されたポート: $DevToolsPort"
-$EdgeProfile = "C:\EdgeDevTools-$DevToolsPort"
+$EdgeProfile = Join-Path ($Config?.browserProfileDir ?? "C:\") "EdgeDevTools-$DevToolsPort"
 
 Write-Host "Edge DevTools Test Start"
 Write-Host "========================"

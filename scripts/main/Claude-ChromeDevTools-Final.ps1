@@ -802,7 +802,7 @@ if ($SkipBrowser) {
     Write-Host "`nℹ️  ブラウザ起動をスキップします（-SkipBrowser フラグ）" -ForegroundColor Yellow
     Write-Host "   DevTools は既に起動済みであることを前提とします`n"
 } else {
-    $BrowserProfile = "C:\DevTools-$SelectedBrowser-$DevToolsPort"
+    $BrowserProfile = Join-Path ($Config.browserProfileDir ?? "C:\") "DevTools-$SelectedBrowser-$DevToolsPort"
     $ProcessName = if ($SelectedBrowser -eq "edge") { "msedge" } else { "chrome" }
 
     Write-Host "`n🌐 $BrowserName DevTools 起動準備..."
@@ -1976,7 +1976,7 @@ if ($SelectedProjects.Count -gt 1) {
 
         # ブラウザ起動（プロジェクト専用プロファイル）
         if (-not $SkipBrowser) {
-            $BrowserProfile = "C:\DevTools-$SelectedBrowser-$AssignedPort"
+            $BrowserProfile = Join-Path ($Config.browserProfileDir ?? "C:\") "DevTools-$SelectedBrowser-$AssignedPort"
             $StartUrl = "http://localhost:$AssignedPort"
 
             $browserArgs = @(
