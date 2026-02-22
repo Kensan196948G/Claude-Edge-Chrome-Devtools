@@ -1902,6 +1902,7 @@ $EncodedRemoteScript | ssh $LinuxHost "tr -d '\r' | base64 -d > /tmp/remote_setu
 if ($LASTEXITCODE -ne 0) {
     Write-Host "❌ リモートセットアップに失敗しました (終了コード: $LASTEXITCODE)" -ForegroundColor Red
     Write-Host "   上記のエラー出力を確認してください" -ForegroundColor Yellow
+    exit 1
 }
 
 # run-claude.sh を個別転送（stdin パイプ方式: コマンドライン長制限回避）
@@ -1909,6 +1910,7 @@ Write-Host "📝 run-claude.sh を転送中..."
 $EncodedRunClaude | ssh $LinuxHost "tr -d '\r' | base64 -d > /tmp/run-claude-tmp.sh && chmod +x /tmp/run-claude-tmp.sh && sudo cp -f /tmp/run-claude-tmp.sh $EscapedLinuxPath && rm /tmp/run-claude-tmp.sh"
 if ($LASTEXITCODE -ne 0) {
     Write-Host "❌ run-claude.sh 転送に失敗しました (終了コード: $LASTEXITCODE)" -ForegroundColor Red
+    exit 1
 } else {
     Write-Host "✅ run-claude.sh 転送完了"
 }
