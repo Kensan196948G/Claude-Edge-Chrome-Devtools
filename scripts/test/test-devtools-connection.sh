@@ -50,7 +50,7 @@ print_info "1. 基本接続確認"
 echo "   エンドポイント: http://127.0.0.1:${PORT}/json/version"
 echo ""
 
-if ! curl -sf --connect-timeout 3 http://127.0.0.1:${PORT}/json/version > /dev/null 2>&1; then
+if ! curl -sf --connect-timeout 3 "http://127.0.0.1:${PORT}/json/version" > /dev/null 2>&1; then
     print_error "接続失敗 - DevToolsポート ${PORT} が応答していません"
     echo ""
     echo "以下を確認してください："
@@ -66,7 +66,7 @@ echo ""
 
 # ===== 2. バージョン情報取得 =====
 print_info "2. バージョン情報"
-VERSION_JSON=$(curl -s http://127.0.0.1:${PORT}/json/version)
+VERSION_JSON=$(curl -s "http://127.0.0.1:${PORT}/json/version")
 
 if command -v jq &> /dev/null; then
     echo "$VERSION_JSON" | jq '.'
@@ -74,7 +74,6 @@ if command -v jq &> /dev/null; then
     BROWSER=$(echo "$VERSION_JSON" | jq -r '.Browser // "N/A"')
     PROTOCOL=$(echo "$VERSION_JSON" | jq -r '."Protocol-Version" // "N/A"')
     USER_AGENT=$(echo "$VERSION_JSON" | jq -r '."User-Agent" // "N/A"')
-    WS_DEBUG_URL=$(echo "$VERSION_JSON" | jq -r '.webSocketDebuggerUrl // "N/A"')
 
     echo ""
     print_success "ブラウザ: ${BROWSER}"
@@ -92,7 +91,7 @@ echo ""
 
 # ===== 3. タブ一覧取得 =====
 print_info "3. 開いているタブ一覧"
-TABS_JSON=$(curl -s http://127.0.0.1:${PORT}/json/list)
+TABS_JSON=$(curl -s "http://127.0.0.1:${PORT}/json/list")
 
 if command -v jq &> /dev/null; then
     TAB_COUNT=$(echo "$TABS_JSON" | jq 'length')
@@ -172,7 +171,14 @@ echo ""
 print_info "7. 推奨ポート範囲確認 (9222-9229)"
 
 EXPECTED_PORTS=(9222 9223 9224 9225 9226 9227 9228 9229)
-if [[ " ${EXPECTED_PORTS[@]} " =~ " ${PORT} " ]]; then
+PORT_IN_RANGE=false
+for p in "${EXPECTED_PORTS[@]}"; do
+    if [ "$p" -eq "$PORT" ]; then
+        PORT_IN_RANGE=true
+        break
+    fi
+done
+if [ "$PORT_IN_RANGE" = true ]; then
     print_success "ポート ${PORT} は推奨範囲内です"
 else
     print_warning "ポート ${PORT} は推奨範囲外です（推奨: 9222-9229）"

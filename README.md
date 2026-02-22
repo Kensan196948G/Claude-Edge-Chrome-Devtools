@@ -231,7 +231,7 @@ jq '. + {
 
 1. すべてのブラウザウィンドウを閉じる
 2. 接続テスト実行: `start.bat` → `[3]` または `[4]`
-3. エンドポイント確認: http://localhost:9222/json/version
+3. エンドポイント確認: `http://localhost:9222/json/version`
 
 ### Statusline未反映
 

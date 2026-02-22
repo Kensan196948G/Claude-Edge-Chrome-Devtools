@@ -87,5 +87,6 @@ if [ "$FOUND_SECRETS" = true ]; then
 fi
 
 echo "  ✅ 機密情報スキャン完了（問題なし）"
-echo "  スキャン対象: $(echo \"$STAGED_FILES\" | wc -l) ファイル"
+STAGED_FILE_COUNT=$(echo "${STAGED_FILES}" | wc -l)
+echo "  スキャン対象: ${STAGED_FILE_COUNT} ファイル"
 exit 0
