@@ -26,6 +26,20 @@ jobs:
           globs: |
             **/*.md
             !node_modules
+            !FINAL-SUMMARY.md
+            !GEMINI.md
+            !IMPLEMENTATION-SUMMARY.md
+            !SYNTAX_CHECK_REPORT.md
+            !config/README.md
+            !docs/Agent-Teams-Guide.md
+            !docs/ClaudeCode*
+            !docs/DevTools-Verification-Checklist.md
+            !docs/GitHub-Repository-Setup.md
+            !docs/MCP-AutoSetup.md
+            !docs/NetworkDrive-PermanentSolution.md
+            !docs/v1.2.0-実装完了レポート.md
+            !docs/モジュール化設計(Modularization-Design).md
+            !docs/改善提案(Improvement-Proposals).md
 
   link-check:
     name: Check Broken Links

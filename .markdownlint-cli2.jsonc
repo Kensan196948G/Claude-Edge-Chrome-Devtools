@@ -1,7 +1,4 @@
 {
-  // Pre-existing files with markdownlint violations
-  // These files existed before the tmux Dashboard PR and have accumulated
-  // violations that are outside the scope of this PR to fix.
   "ignorePatterns": [
     "FINAL-SUMMARY.md",
     "GEMINI.md",
@@ -9,7 +6,7 @@
     "SYNTAX_CHECK_REPORT.md",
     "config/README.md",
     "docs/Agent-Teams-Guide.md",
-    "docs/ClaudeCode 統合運用プロンプト vNext (2.1.50 + MCPフル活用 + 自己修復ループ v4 統合完全版).md",
+    "docs/ClaudeCode*",
     "docs/DevTools-Verification-Checklist.md",
     "docs/GitHub-Repository-Setup.md",
     "docs/MCP-AutoSetup.md",

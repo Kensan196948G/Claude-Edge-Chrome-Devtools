@@ -16,8 +16,8 @@ if [ "$BRANCH_CHECKOUT" = "0" ]; then
 fi
 
 echo "🔄 post-checkout hook: ブランチ切り替え検出"
-echo "  From: $(git rev-parse --short $PREV_HEAD 2>/dev/null || echo 'unknown')"
-echo "  To:   $(git rev-parse --short $NEW_HEAD 2>/dev/null || echo 'unknown')"
+echo "  From: $(git rev-parse --short "$PREV_HEAD" 2>/dev/null || echo 'unknown')"
+echo "  To:   $(git rev-parse --short "$NEW_HEAD" 2>/dev/null || echo 'unknown')"
 echo ""
 
 CHANGES_DETECTED=false
@@ -26,7 +26,7 @@ CHANGES_DETECTED=false
 # 1. package.json の変更確認（Node.js プロジェクト）
 # ============================================================
 if [ -f "package.json" ]; then
-    if git diff --name-only $PREV_HEAD $NEW_HEAD | grep -q "package.json\|package-lock.json\|yarn.lock"; then
+    if git diff --name-only "$PREV_HEAD" "$NEW_HEAD" | grep -q "package.json\|package-lock.json\|yarn.lock"; then
         echo "📦 package.json の変更を検出"
         CHANGES_DETECTED=true
 
@@ -45,7 +45,7 @@ fi
 # 2. requirements.txt の変更確認（Python プロジェクト）
 # ============================================================
 if [ -f "requirements.txt" ]; then
-    if git diff --name-only $PREV_HEAD $NEW_HEAD | grep -q "requirements.txt"; then
+    if git diff --name-only "$PREV_HEAD" "$NEW_HEAD" | grep -q "requirements.txt"; then
         echo "🐍 requirements.txt の変更を検出"
         CHANGES_DETECTED=true
 
@@ -63,7 +63,7 @@ fi
 # ============================================================
 # 3. config.json の変更確認
 # ============================================================
-if git diff --name-only $PREV_HEAD $NEW_HEAD | grep -q "config/config.json\|config.json"; then
+if git diff --name-only "$PREV_HEAD" "$NEW_HEAD" | grep -q "config/config.json\|config.json"; then
     echo "⚙️  config.json の変更を検出"
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -77,7 +77,7 @@ if git diff --name-only $PREV_HEAD $NEW_HEAD | grep -q "config/config.json\|conf
     echo "  • MCP Token の変更（githubToken, braveApiKey）"
     echo ""
     echo "変更内容:"
-    git diff $PREV_HEAD $NEW_HEAD -- config/config.json config.json 2>/dev/null | head -20
+    git diff "$PREV_HEAD" "$NEW_HEAD" -- config/config.json config.json 2>/dev/null | head -20
     echo ""
 
     CHANGES_DETECTED=true
@@ -86,7 +86,7 @@ fi
 # ============================================================
 # 4. .mcp.json の変更確認
 # ============================================================
-if git diff --name-only $PREV_HEAD $NEW_HEAD | grep -q ".mcp.json"; then
+if git diff --name-only "$PREV_HEAD" "$NEW_HEAD" | grep -q ".mcp.json"; then
     echo "🔌 .mcp.json の変更を検出"
     echo "   .mcp.json のバックアップを推奨します"
     echo ""
@@ -132,7 +132,7 @@ fi
 # 6. Git submodule の更新確認
 # ============================================================
 if [ -f ".gitmodules" ]; then
-    if git diff --name-only $PREV_HEAD $NEW_HEAD | grep -q ".gitmodules"; then
+    if git diff --name-only "$PREV_HEAD" "$NEW_HEAD" | grep -q ".gitmodules"; then
         echo "📦 Git submodule の変更を検出"
         CHANGES_DETECTED=true
 
