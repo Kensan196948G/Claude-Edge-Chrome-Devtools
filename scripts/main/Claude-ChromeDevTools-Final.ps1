@@ -1860,11 +1860,9 @@ if [ "`$MCP_ENABLED" = "true" ]; then
 fi
 
 # ============================================================
-# 5. run-claude.sh の書き込みと実行権限付与
+# 5. （run-claude.sh は PowerShell 側から別途転送）
 # ============================================================
-echo '$EncodedRunClaude' | base64 -d > "`${LINUX_PATH}"
-chmod +x "`${LINUX_PATH}"
-echo "✅ run-claude.sh 書き込み・実行権限付与完了: `${LINUX_PATH}"
+echo "ℹ️  run-claude.sh はセットアップ後に個別転送されます"
 
 # ============================================================
 # 6. ポートクリーンアップ
@@ -1884,6 +1882,11 @@ $EncodedRemoteScript = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.Ge
 
 # 単一SSH呼び出しで実行
 ssh $LinuxHost "echo '$EncodedRemoteScript' | base64 -d > /tmp/remote_setup.sh && chmod +x /tmp/remote_setup.sh && /tmp/remote_setup.sh && rm /tmp/remote_setup.sh"
+
+# run-claude.sh を個別転送（コマンドライン長制限回避のため $RemoteSetupScript から分離）
+Write-Host "📝 run-claude.sh を転送中..."
+ssh $LinuxHost "echo '$EncodedRunClaude' | base64 -d > $EscapedLinuxPath && chmod +x $EscapedLinuxPath"
+Write-Host "✅ run-claude.sh 転送完了"
 
 # Hooks ファイルを個別転送（コマンドライン長制限回避）
 if ($HooksEnabled) {
