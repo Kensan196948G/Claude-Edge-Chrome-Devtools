@@ -268,7 +268,7 @@ grep -rn "Z:\\\|Z:|Zドライブ" *.md docs/*.md
 grep -rn "windows-dev" *.md  # <your-linux-host> 等
 
 # ポート範囲の統一
-grep -rn "9222-9225" *.md
+grep -rn "9222-922[0-5]" *.md  # 旧ポート範囲（9222-9225）検出
 ```
 
 ---

@@ -23,7 +23,7 @@ while true; do
         # 接続成功
         BROWSER=$(echo "$VERSION_JSON" | jq -r '.Browser // "Unknown"' 2>/dev/null || echo "Unknown")
         PROTOCOL=$(echo "$VERSION_JSON" | jq -r '."Protocol-Version" // "?"' 2>/dev/null || echo "?")
-        USER_AGENT=$(echo "$VERSION_JSON" | jq -r '."User-Agent" // ""' 2>/dev/null || echo "")
+        _USER_AGENT=$(echo "$VERSION_JSON" | jq -r '."User-Agent" // ""' 2>/dev/null || echo "")
 
         echo -e "  \033[32m● CONNECTED\033[0m"
         echo ""
