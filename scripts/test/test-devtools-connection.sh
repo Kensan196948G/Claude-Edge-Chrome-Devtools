@@ -74,7 +74,6 @@ if command -v jq &> /dev/null; then
     BROWSER=$(echo "$VERSION_JSON" | jq -r '.Browser // "N/A"')
     PROTOCOL=$(echo "$VERSION_JSON" | jq -r '."Protocol-Version" // "N/A"')
     USER_AGENT=$(echo "$VERSION_JSON" | jq -r '."User-Agent" // "N/A"')
-    WS_DEBUG_URL=$(echo "$VERSION_JSON" | jq -r '.webSocketDebuggerUrl // "N/A"')
 
     echo ""
     print_success "ブラウザ: ${BROWSER}"
@@ -172,7 +171,14 @@ echo ""
 print_info "7. 推奨ポート範囲確認 (9222-9229)"
 
 EXPECTED_PORTS=(9222 9223 9224 9225 9226 9227 9228 9229)
-if [[ " ${EXPECTED_PORTS[@]} " =~ " ${PORT} " ]]; then
+PORT_IN_RANGE=false
+for p in "${EXPECTED_PORTS[@]}"; do
+    if [ "$p" -eq "$PORT" ]; then
+        PORT_IN_RANGE=true
+        break
+    fi
+done
+if [ "$PORT_IN_RANGE" = true ]; then
     print_success "ポート ${PORT} は推奨範囲内です"
 else
     print_warning "ポート ${PORT} は推奨範囲外です（推奨: 9222-9229）"
