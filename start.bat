@@ -400,24 +400,26 @@ echo.
 echo Execute? (Y/N)
 set /p "tmux_confirm="
 
-if /i "%tmux_confirm%"=="Y" (
-    echo.
-    echo Running tmux-install.sh on remote host...
-    echo.
-    pwsh -NoProfile -ExecutionPolicy Bypass -Command ^
-      "$config = Get-Content '%~dp0config\config.json' -Raw | ConvertFrom-Json; " ^
-      "$host_name = $config.linuxHost; " ^
-      "$scriptPath = '%~dp0scripts\tmux\tmux-install.sh'; " ^
-      "$content = Get-Content $scriptPath -Raw; " ^
-      "$content = $content -replace \"`r`n\", \"`n\"; " ^
-      "$encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($content)); " ^
-      "ssh $host_name \"echo '$encoded' | base64 -d > /tmp/tmux-install.sh && chmod +x /tmp/tmux-install.sh && /tmp/tmux-install.sh\""
-    echo.
-) else (
+if /i not "%tmux_confirm%"=="Y" (
     echo.
     echo Cancelled.
+    pause
+    goto :eof
 )
 
+echo.
+echo Running tmux-install.sh on remote host...
+echo.
+pwsh -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$config = Get-Content '%~dp0config\config.json' -Raw | ConvertFrom-Json; " ^
+  "$host_name = $config.linuxHost; " ^
+  "$scriptPath = '%~dp0scripts\tmux\tmux-install.sh'; " ^
+  "$content = Get-Content $scriptPath -Raw; " ^
+  "$content = $content -replace ""`r`n"", ""`n""; " ^
+  "$encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($content)); " ^
+  "ssh $host_name ""echo '$encoded' | base64 -d > /tmp/tmux-install.sh && chmod +x /tmp/tmux-install.sh && /tmp/tmux-install.sh"""
+
+echo.
 pause
 goto :eof
 
