@@ -23,7 +23,10 @@ param(
     [switch]$NonInteractive,         # 非対話フラグ
 
     [Parameter(Mandatory=$false)]
-    [switch]$SkipBrowser             # CI環境用（ブラウザ起動スキップ）
+    [switch]$SkipBrowser,            # CI環境用（ブラウザ起動スキップ）
+
+    [Parameter(Mandatory=$false)]
+    [switch]$TmuxMode                # start.bat から渡される tmux フラグ
 )
 
 $ErrorActionPreference = "Stop"
@@ -1348,6 +1351,20 @@ CI失敗が2回以上同種で発生した場合：
 * CI成功なきマージは禁止
 * 記録なき進行は禁止
 * CI失敗は学習対象とせよ
+
+---
+
+## 利用可能な Agent Skills (.claude/skills/)
+
+以下のスキルが利用可能です。`Skill` ツールまたは `/skill-name` で呼び出せます。
+
+| スキル名 | 用途 |
+|---------|------|
+| `tmux-ops` | tmuxレイアウト切替・ペイン操作・セッション管理 |
+| `agent-teams-ops` | Agent Teamsチーム作成・監視・シャットダウン |
+| `devops-monitor` | DevTools/MCP診断・リソース確認・ネットワーク診断 |
+| `session-restore` | SSH切断後のtmuxセッション復元手順 |
+| `tmux-layout-sync` | Agent Teams起動/停止時のtmuxレイアウト同期 |
 INITPROMPTEOF
 )
 
@@ -1500,7 +1517,7 @@ echo "👋 終了しました"
 $RunClaude = $RunClaude -replace '__DEVTOOLS_PORT__', $DevToolsPort
 
 # tmux 設定値を置換
-$TmuxEnabled = if ($Config.tmux -and $Config.tmux.enabled) { "true" } else { "false" }
+$TmuxEnabled = if ($TmuxMode -or ($Config.tmux -and $Config.tmux.enabled)) { "true" } else { "false" }
 $TmuxLayout = if ($Config.tmux -and $Config.tmux.defaultLayout) { $Config.tmux.defaultLayout } else { "auto" }
 $TmuxScriptsDir = "$LinuxBase/$ProjectName/scripts/tmux"
 
