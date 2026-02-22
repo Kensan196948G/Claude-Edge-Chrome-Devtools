@@ -5,6 +5,9 @@
 
 set -euo pipefail
 
+# エラートラップ: 予期しないエラー時にデバッグ情報を表示（スクリプト終了前）
+trap 'echo "  ⚠️  予期しないエラー (line ${LINENO}, exit ${?})" >&2' ERR
+
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "🔍 起動時ヘルスチェック"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -20,10 +23,13 @@ echo ""
 # 2. DevTools 接続確認
 echo "📋 DevTools 接続:"
 PORT="${MCP_CHROME_DEBUG_PORT:-${CLAUDE_CHROME_DEBUG_PORT:-9222}}"
-if curl -sf --connect-timeout 2 "http://127.0.0.1:${PORT}/json/version" >/dev/null 2>&1; then
+if ! command -v curl &>/dev/null; then
+    echo "  ⚠️  curl がインストールされていません (DevTools接続確認スキップ)"
+elif curl -sf --connect-timeout 2 "http://127.0.0.1:${PORT}/json/version" >/dev/null 2>&1; then
     echo "  ✅ DevTools 接続成功 (ポート: ${PORT})"
 else
     echo "  ❌ DevTools 接続失敗 (ポート: ${PORT})"
+    echo "     → ブラウザが起動しているか、ポート番号が正しいか確認してください"
 fi
 echo ""
 
@@ -59,3 +65,6 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "✅ ヘルスチェック完了"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
+
+# ヘルスチェックの失敗は Claude 起動を妨げないよう、常に 0 で終了
+exit 0

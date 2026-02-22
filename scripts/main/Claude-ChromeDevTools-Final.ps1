@@ -1369,6 +1369,7 @@ INITPROMPTEOF
 )
 
 trap 'echo "🛑 Ctrl+C で終了"; exit 0' INT
+trap 'echo "❌ エラー発生: line ${LINENO} (exit ${?})" >&2' ERR
 
 echo "🔍 DevTools 応答確認..."
 echo "PORT=${PORT}"
@@ -1407,8 +1408,9 @@ fi
 export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 
 # on-startup hook 実行（環境変数設定後）
+# ヘルスチェック失敗はエラーとしない（Claude 起動を妨げない）
 if [ -f ".claude/hooks/on-startup.sh" ]; then
-    bash .claude/hooks/on-startup.sh
+    bash .claude/hooks/on-startup.sh || echo "⚠️  on-startup.sh 失敗 (exit $?) — Claude 起動は続行します"
 fi
 
 # DevTools詳細接続テスト関数
@@ -1497,6 +1499,13 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 echo "📝 初期プロンプトを自動入力します..."
 echo ""
+
+# claude コマンド存在確認
+if ! command -v claude &>/dev/null; then
+    echo "❌ claude コマンドが見つかりません。"
+    echo "   インストール: npm install -g @anthropic-ai/claude-code"
+    exit 1
+fi
 
 while true; do
   # 初期プロンプトをパイプで自動入力
