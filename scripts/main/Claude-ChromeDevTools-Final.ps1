@@ -1368,7 +1368,7 @@ CI失敗が2回以上同種で発生した場合：
 INITPROMPTEOF
 )
 
-trap 'echo "🛑 Ctrl+C で終了"; exit 0' INT
+trap 'echo "🛑 Ctrl+C を受信 — while ループで exit 130 処理します"' INT
 trap 'echo "❌ エラー発生: line ${LINENO} (exit ${?})" >&2' ERR
 
 echo "🔍 DevTools 応答確認..."
@@ -1511,8 +1511,12 @@ while true; do
   if [ -n "${TMUX:-}" ]; then
     # tmux 内: TTY 接続を維持して直接実行（パイプなし → インタラクティブモード保証）
     # パイプを使うと stdin が非 TTY になり Claude がバッチモードで動作して即終了する
+    echo "🔍 [診断] TMUX=${TMUX:-} | claude=$(command -v claude 2>/dev/null || echo '未発見')"
+    # set +e: claude 非ゼロ終了時に set -e でスクリプトが即終了しないよう明示的に無効化
+    set +e
     claude --dangerously-skip-permissions
     EXIT_CODE=$?
+    set -e
   else
     # 非 tmux: INIT_PROMPT をパイプで自動入力（従来方式）
     set +e
