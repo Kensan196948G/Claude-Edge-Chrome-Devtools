@@ -1358,7 +1358,7 @@ echo ""
 
 while true; do
   # 初期プロンプトをパイプで自動入力
-  echo "$INIT_PROMPT" | claude --dangerously-skip-permissions
+  (echo "$INIT_PROMPT"; cat) | claude --dangerously-skip-permissions
   EXIT_CODE=$?
 
   [ "$EXIT_CODE" -eq 0 ] && break

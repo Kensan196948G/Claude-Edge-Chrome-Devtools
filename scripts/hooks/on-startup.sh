@@ -48,7 +48,7 @@ echo ""
 # 4. Memory MCP からプロジェクトコンテキスト読み込み
 # context-loader.sh を呼び出し（存在する場合）
 if [ -f ".claude/hooks/lib/context-loader.sh" ]; then
-    bash .claude/hooks/lib/context-loader.sh "${PWD##*/}" 2>&1 | head -5
+    bash .claude/hooks/lib/context-loader.sh "${PWD##*/}" 2>&1 | head -5 || true
 else
     echo "📋 Memory MCP コンテキスト復元:"
     echo "  ℹ️  context-loader.sh が見つかりません"
