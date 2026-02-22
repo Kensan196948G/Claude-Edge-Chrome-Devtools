@@ -1530,10 +1530,10 @@ $RunClaude = $RunClaude -replace '__SCRIPTS_TMUX_DIR__', $TmuxScriptsDir
 $RunClaude = $RunClaude -replace "`r`n", "`n"
 $RunClaude = $RunClaude -replace "`r", "`n"
 
-# UTF-8 No BOM で書き込み
-[System.IO.File]::WriteAllText($RunClaudePath, $RunClaude, [System.Text.UTF8Encoding]::new($false))
+# run-claude.sh を Base64 エンコード（SSH 経由で転送するため UNC パスへの直接書き込みは行わない）
+$EncodedRunClaude = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($RunClaude))
 
-Write-Host "✅ run-claude.sh 生成完了"
+Write-Host "✅ run-claude.sh 生成完了（SSH 経由転送予定）"
 
 # ============================================================
 # ⑤-b リモートセットアップ統合スクリプト
@@ -1860,10 +1860,11 @@ if [ "`$MCP_ENABLED" = "true" ]; then
 fi
 
 # ============================================================
-# 5. chmod +x run-claude.sh
+# 5. run-claude.sh の書き込みと実行権限付与
 # ============================================================
+echo '$EncodedRunClaude' | base64 -d > "`${LINUX_PATH}"
 chmod +x "`${LINUX_PATH}"
-echo "✅ 実行権限付与完了: `${LINUX_PATH}"
+echo "✅ run-claude.sh 書き込み・実行権限付与完了: `${LINUX_PATH}"
 
 # ============================================================
 # 6. ポートクリーンアップ
