@@ -1762,3 +1762,6 @@ if ($LogPath) {
         Write-Warning "ログ記録終了処理エラー: $_"
     }
 }
+
+# SSH終了コードをプロセス終了コードとして伝播（start.bat の ERRORLEVEL 検出に必要）
+exit $SSHExitCode
