@@ -1764,6 +1764,14 @@ MCP_BACKUP="`${PROJECT_DIR}/.mcp.json.bak.`${MCP_BACKUP_TIMESTAMP}"
 echo "🔧 リモートセットアップ開始..."
 
 # ============================================================
+# 0. プロジェクトディレクトリの書き込み権限確保（passwordless sudo）
+# ============================================================
+echo "🔑 プロジェクトディレクトリ権限設定中..."
+sudo mkdir -p "`${LINUX_PATH}"
+sudo chown -R "`${USER}":"`${USER}" "`${LINUX_PATH}"
+echo "✅ 権限設定完了"
+
+# ============================================================
 # 1. jq インストール確認
 # ============================================================
 if ! command -v jq &>/dev/null; then
@@ -1891,11 +1899,19 @@ $EncodedRemoteScript = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.Ge
 
 # 単一SSH呼び出しで実行（stdin パイプ方式: コマンドライン長制限回避）
 $EncodedRemoteScript | ssh $LinuxHost "tr -d '\r' | base64 -d > /tmp/remote_setup.sh && chmod +x /tmp/remote_setup.sh && /tmp/remote_setup.sh && rm /tmp/remote_setup.sh"
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ リモートセットアップに失敗しました (終了コード: $LASTEXITCODE)" -ForegroundColor Red
+    Write-Host "   上記のエラー出力を確認してください" -ForegroundColor Yellow
+}
 
 # run-claude.sh を個別転送（stdin パイプ方式: コマンドライン長制限回避）
 Write-Host "📝 run-claude.sh を転送中..."
-$EncodedRunClaude | ssh $LinuxHost "tr -d '\r' | base64 -d > /tmp/run-claude-tmp.sh && chmod +x /tmp/run-claude-tmp.sh && cp -f /tmp/run-claude-tmp.sh $EscapedLinuxPath && rm /tmp/run-claude-tmp.sh"
-Write-Host "✅ run-claude.sh 転送完了"
+$EncodedRunClaude | ssh $LinuxHost "tr -d '\r' | base64 -d > /tmp/run-claude-tmp.sh && chmod +x /tmp/run-claude-tmp.sh && sudo cp -f /tmp/run-claude-tmp.sh $EscapedLinuxPath && rm /tmp/run-claude-tmp.sh"
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ run-claude.sh 転送に失敗しました (終了コード: $LASTEXITCODE)" -ForegroundColor Red
+} else {
+    Write-Host "✅ run-claude.sh 転送完了"
+}
 
 # Hooks ファイルを個別転送（コマンドライン長制限回避）
 if ($HooksEnabled) {
@@ -1903,36 +1919,55 @@ if ($HooksEnabled) {
 
     $EscapedLinuxHooksDir = Escape-SSHArgument "$LinuxBase/$ProjectName/.claude/hooks"
 
+    # hooks ディレクトリを事前作成（sudo で権限確保）
+    ssh $LinuxHost "sudo mkdir -p $EscapedLinuxHooksDir/lib && sudo chown -R `$USER:`$USER $EscapedLinuxHooksDir" 2>$null
+
     # on-startup.sh 転送
     if ($EncodedOnStartup) {
-        ssh $LinuxHost "echo '$EncodedOnStartup' | base64 -d > $EscapedLinuxHooksDir/on-startup.sh && chmod +x $EscapedLinuxHooksDir/on-startup.sh"
-        Write-Host "  ✅ on-startup.sh 転送完了"
+        ssh $LinuxHost "echo '$EncodedOnStartup' | base64 -d | sudo tee $EscapedLinuxHooksDir/on-startup.sh > /dev/null && sudo chmod +x $EscapedLinuxHooksDir/on-startup.sh"
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "  ❌ on-startup.sh 転送失敗 (終了コード: $LASTEXITCODE)" -ForegroundColor Red
+        } else {
+            Write-Host "  ✅ on-startup.sh 転送完了"
+        }
     }
 
     # pre-commit.sh 転送
     if ($EncodedPreCommit) {
-        ssh $LinuxHost "echo '$EncodedPreCommit' | base64 -d > $EscapedLinuxHooksDir/pre-commit.sh && chmod +x $EscapedLinuxHooksDir/pre-commit.sh"
-        Write-Host "  ✅ pre-commit.sh 転送完了"
+        ssh $LinuxHost "echo '$EncodedPreCommit' | base64 -d | sudo tee $EscapedLinuxHooksDir/pre-commit.sh > /dev/null && sudo chmod +x $EscapedLinuxHooksDir/pre-commit.sh"
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "  ❌ pre-commit.sh 転送失敗 (終了コード: $LASTEXITCODE)" -ForegroundColor Red
+        } else {
+            Write-Host "  ✅ pre-commit.sh 転送完了"
 
-        # Git hooks シンボリックリンク作成
-        ssh $LinuxHost "cd $EscapedLinuxBase/$EscapedProjectName && [ -d .git/hooks ] && ln -sf ../../.claude/hooks/pre-commit.sh .git/hooks/pre-commit || true" 2>$null
-        Write-Host "  ✅ Git pre-commit hook 登録完了"
+            # Git hooks シンボリックリンク作成
+            ssh $LinuxHost "cd $EscapedLinuxBase/$EscapedProjectName && [ -d .git/hooks ] && ln -sf ../../.claude/hooks/pre-commit.sh .git/hooks/pre-commit || true" 2>$null
+            Write-Host "  ✅ Git pre-commit hook 登録完了"
+        }
     }
 
     # post-checkout.sh 転送
     if ($EncodedPostCheckout) {
-        ssh $LinuxHost "echo '$EncodedPostCheckout' | base64 -d > $EscapedLinuxHooksDir/post-checkout.sh && chmod +x $EscapedLinuxHooksDir/post-checkout.sh"
-        Write-Host "  ✅ post-checkout.sh 転送完了"
+        ssh $LinuxHost "echo '$EncodedPostCheckout' | base64 -d | sudo tee $EscapedLinuxHooksDir/post-checkout.sh > /dev/null && sudo chmod +x $EscapedLinuxHooksDir/post-checkout.sh"
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "  ❌ post-checkout.sh 転送失敗 (終了コード: $LASTEXITCODE)" -ForegroundColor Red
+        } else {
+            Write-Host "  ✅ post-checkout.sh 転送完了"
 
-        # Git hooks シンボリックリンク作成
-        ssh $LinuxHost "cd $EscapedLinuxBase/$EscapedProjectName && [ -d .git/hooks ] && ln -sf ../../.claude/hooks/post-checkout.sh .git/hooks/post-checkout || true" 2>$null
-        Write-Host "  ✅ Git post-checkout hook 登録完了"
+            # Git hooks シンボリックリンク作成
+            ssh $LinuxHost "cd $EscapedLinuxBase/$EscapedProjectName && [ -d .git/hooks ] && ln -sf ../../.claude/hooks/post-checkout.sh .git/hooks/post-checkout || true" 2>$null
+            Write-Host "  ✅ Git post-checkout hook 登録完了"
+        }
     }
 
     # context-loader.sh 転送
     if ($EncodedContextLoader) {
-        ssh $LinuxHost "echo '$EncodedContextLoader' | base64 -d > $EscapedLinuxHooksDir/lib/context-loader.sh && chmod +x $EscapedLinuxHooksDir/lib/context-loader.sh"
-        Write-Host "  ✅ context-loader.sh 転送完了"
+        ssh $LinuxHost "echo '$EncodedContextLoader' | base64 -d | sudo tee $EscapedLinuxHooksDir/lib/context-loader.sh > /dev/null && sudo chmod +x $EscapedLinuxHooksDir/lib/context-loader.sh"
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "  ❌ context-loader.sh 転送失敗 (終了コード: $LASTEXITCODE)" -ForegroundColor Red
+        } else {
+            Write-Host "  ✅ context-loader.sh 転送完了"
+        }
     }
 
     Write-Host "✅ Hooks 設定完了`n"

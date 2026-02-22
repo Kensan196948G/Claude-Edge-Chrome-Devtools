@@ -1610,6 +1610,14 @@ else
     echo "✅ jq インストール済み"
 fi
 
+# ============================================================
+# 0. プロジェクトディレクトリの書き込み権限確保（passwordless sudo）
+# ============================================================
+echo "🔑 プロジェクトディレクトリ権限設定中..."
+sudo mkdir -p $EscapedLinuxBase/$EscapedProjectName
+sudo chown -R `$USER:`$USER $EscapedLinuxBase/$EscapedProjectName
+echo "✅ 権限設定完了"
+
 # プロジェクトディレクトリ作成
 echo "📁 ディレクトリ作成中..."
 mkdir -p $EscapedLinuxBase/$EscapedProjectName/.claude
@@ -1688,11 +1696,19 @@ $ConsolidatedSetupScript = $ConsolidatedSetupScript -replace "`r", "`n"
 $encodedSetupScript = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($ConsolidatedSetupScript))
 $setupResult = $encodedSetupScript | ssh $LinuxHost "tr -d '\r' | base64 -d > /tmp/remote_setup.sh && chmod +x /tmp/remote_setup.sh && /tmp/remote_setup.sh && rm /tmp/remote_setup.sh"
 Write-Host $setupResult
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ リモートセットアップに失敗しました (終了コード: $LASTEXITCODE)" -ForegroundColor Red
+    Write-Host "   上記のエラー出力を確認してください" -ForegroundColor Yellow
+}
 
 # run-claude.sh を個別転送（stdin パイプ方式: コマンドライン長制限回避）
 Write-Host "📝 run-claude.sh を転送中..."
-$EncodedRunClaude | ssh $LinuxHost "tr -d '\r' | base64 -d > /tmp/run-claude-tmp.sh && chmod +x /tmp/run-claude-tmp.sh && cp -f /tmp/run-claude-tmp.sh $EscapedLinuxPath && rm /tmp/run-claude-tmp.sh"
-Write-Host "✅ run-claude.sh 転送完了"
+$EncodedRunClaude | ssh $LinuxHost "tr -d '\r' | base64 -d > /tmp/run-claude-tmp.sh && chmod +x /tmp/run-claude-tmp.sh && sudo cp -f /tmp/run-claude-tmp.sh $EscapedLinuxPath && rm /tmp/run-claude-tmp.sh"
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ run-claude.sh 転送に失敗しました (終了コード: $LASTEXITCODE)" -ForegroundColor Red
+} else {
+    Write-Host "✅ run-claude.sh 転送完了"
+}
 
 if ($statuslineEnabled) {
     Write-Host ""
