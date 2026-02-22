@@ -51,9 +51,9 @@ while true; do
                 echo "    (no members)"
             fi
 
-            MEMBER_COUNT=$(jq '.members | length' "$CONFIG_FILE" 2>/dev/null || echo "0")
+            _MEMBER_COUNT=$(jq '.members | length' "$CONFIG_FILE" 2>/dev/null || echo "0")
         else
-            MEMBER_COUNT="?"
+            _MEMBER_COUNT="?"
             echo "    (jq required for details)"
         fi
 
