@@ -1686,12 +1686,12 @@ $ConsolidatedSetupScript = $ConsolidatedSetupScript -replace "`r", "`n"
 
 # base64エンコードして転送・実行（stdin パイプ方式: コマンドライン長制限回避）
 $encodedSetupScript = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($ConsolidatedSetupScript))
-$setupResult = $encodedSetupScript | ssh $LinuxHost "base64 -d > /tmp/remote_setup.sh && chmod +x /tmp/remote_setup.sh && /tmp/remote_setup.sh && rm /tmp/remote_setup.sh"
+$setupResult = $encodedSetupScript | ssh $LinuxHost "tr -d '\r' | base64 -d > /tmp/remote_setup.sh && chmod +x /tmp/remote_setup.sh && /tmp/remote_setup.sh && rm /tmp/remote_setup.sh"
 Write-Host $setupResult
 
 # run-claude.sh を個別転送（stdin パイプ方式: コマンドライン長制限回避）
 Write-Host "📝 run-claude.sh を転送中..."
-$EncodedRunClaude | ssh $LinuxHost "base64 -d > $EscapedLinuxPath && chmod +x $EscapedLinuxPath"
+$EncodedRunClaude | ssh $LinuxHost "tr -d '\r' | base64 -d > /tmp/run-claude-tmp.sh && chmod +x /tmp/run-claude-tmp.sh && cp -f /tmp/run-claude-tmp.sh $EscapedLinuxPath && rm /tmp/run-claude-tmp.sh"
 Write-Host "✅ run-claude.sh 転送完了"
 
 if ($statuslineEnabled) {
