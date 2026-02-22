@@ -75,7 +75,7 @@ record() {
 setup_session() {
     ssh_run "
         # 既存セッションがあれば先にクリア
-        tmux kill-session -t '${SESSION_NAME}' 2>/dev/null || true
+        tmux kill-session -t '${SESSION_NAME}' || true
 
         # 検証用セッション作成
         tmux new-session -d -s '${SESSION_NAME}' -x 220 -y 50
@@ -169,10 +169,10 @@ check_c5() {
 # ------------------------------------------------------------
 check_c6() {
     local out
-    out=$(ssh_run "find '${REMOTE_BASE}/scripts/tmux/panes/' -maxdepth 1 -name '*.sh' 2>&1 | wc -l")
+    out=$(ssh_run "find '${REMOTE_BASE}/scripts/tmux/panes/' -maxdepth 1 -name '*.sh' 2>/dev/null | wc -l")
     local count
     count=$(echo "${out}" | tr -d '[:space:]')
-    if [ "${count}" -ge 1 ] 2>/dev/null; then
+    if [ "${count}" -ge 1 ]; then
         record C6 PASS
     else
         record C6 FAIL
@@ -241,7 +241,7 @@ check_c10() {
     out=$(ssh_run "grep -c 'select-pane.*-T.*Claude Code' '${REMOTE_BASE}/scripts/tmux/tmux-dashboard.sh' 2>&1")
     local count
     count=$(echo "${out}" | tr -d '[:space:]')
-    if [ "${count}" -ge 1 ] 2>/dev/null; then
+    if [ "${count}" -ge 1 ]; then
         record C10 PASS
     else
         record C10 FAIL
