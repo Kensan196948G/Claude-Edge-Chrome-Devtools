@@ -238,9 +238,10 @@ check_c9() {
 # ------------------------------------------------------------
 check_c10() {
     local out
-    out=$(ssh_run "grep -c 'select-pane.*-T.*Claude Code' '${REMOTE_BASE}/scripts/tmux/tmux-dashboard.sh' 2>&1")
+    out=$(ssh_run "grep -c 'select-pane.*-T.*Claude Code' '${REMOTE_BASE}/scripts/tmux/tmux-dashboard.sh'")
     local count
-    count=$(echo "${out}" | tr -d '[:space:]')
+    count=$(echo "${out}" | grep -o '^[0-9]*' | head -1)
+    count="${count:-0}"
     if [ "${count}" -ge 1 ]; then
         record C10 PASS
     else
@@ -257,6 +258,7 @@ main() {
     setup_out=$(setup_session)
     if ! echo "${setup_out}" | grep -q "SETUP_OK"; then
         # セットアップ失敗時でも検証を継続（接続不能はすべて FAIL）
+        cleanup_session
         for cat in C1 C2 C3 C4 C5 C6 C7 C8 C9 C10; do
             record "${cat}" FAIL
         done
