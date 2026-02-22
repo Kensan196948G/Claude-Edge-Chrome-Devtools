@@ -1554,7 +1554,7 @@ if ($Config.tmux -and $Config.tmux.enabled) {
     $tmuxLines += ""
     $tmuxLines += "# === tmux スクリプト配置 ==="
     $tmuxLines += 'echo "🖥️  tmux スクリプト配置中..."'
-    $tmuxLines += 'TMUX_BASE="' + "$EscapedLinuxBase/$EscapedProjectName/scripts/tmux" + '"'
+    $tmuxLines += 'TMUX_BASE="${LINUX_BASE}/${PROJECT_NAME}/scripts/tmux"'
     $tmuxLines += 'mkdir -p "${TMUX_BASE}/panes"'
     $tmuxLines += 'mkdir -p "${TMUX_BASE}/layouts"'
 
