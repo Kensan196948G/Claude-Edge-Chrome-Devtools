@@ -64,6 +64,7 @@ echo ""
 # ============================================================
 if ! command -v tmux &>/dev/null; then
     echo "⚠️  tmux が見つかりません。通常モードで起動します。"
+    # shellcheck disable=SC2086
     exec $CLAUDE_CMD
 fi
 
@@ -133,7 +134,7 @@ for pane_def in "${PANE_DEFS[@]}"; do
         tmux split-window -v -t "${SESSION_NAME}" -p "$split_pct"
     fi
 
-    ((PANE_INDEX++))
+    PANE_INDEX=$((PANE_INDEX + 1))
 
     # script_args のプレースホルダー置換
     script_args="${script_args//__PORT__/$PORT}"

@@ -264,8 +264,8 @@ Measure-Command { .\scripts\main\Claude-EdgeDevTools.ps1 }
 # Z:\ 参照の有無
 grep -rn "Z:\\\|Z:|Zドライブ" *.md docs/*.md
 
-# windows-dev の有無
-grep -rn "windows-dev" *.md
+# <your-linux-host> (windows-dev 等) のハードコードの有無
+grep -rn "windows-dev" *.md  # <your-linux-host> 等
 
 # ポート範囲の統一
 grep -rn "9222-9225" *.md

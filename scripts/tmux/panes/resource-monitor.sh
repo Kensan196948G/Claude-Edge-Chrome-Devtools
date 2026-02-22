@@ -39,7 +39,7 @@ while true; do
         ROOT_USAGE=$(df -h / 2>/dev/null | awk 'NR==2 {printf "    / : %s / %s (%s)", $3, $2, $5}')
         echo "$ROOT_USAGE"
     fi
-    if df -h /mnt/LinuxHDD &>/dev/null 2>&1; then
+    if df -h /mnt/LinuxHDD &>/dev/null; then
         HDD_USAGE=$(df -h /mnt/LinuxHDD 2>/dev/null | awk 'NR==2 {printf "    HDD: %s / %s (%s)", $3, $2, $5}')
         echo "$HDD_USAGE"
     fi

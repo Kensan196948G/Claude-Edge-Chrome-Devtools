@@ -7,11 +7,13 @@ allowed-tools: Bash, Read, Grep
 # DevOps Monitor
 
 ## 概要
+
 開発環境のヘルスチェックと診断を行うスキルです。
 
 ## 診断コマンド
 
 ### DevTools 接続診断
+
 ```bash
 # ポート番号（環境変数または引数から取得）
 PORT=${MCP_CHROME_DEBUG_PORT:-${CLAUDE_CHROME_DEBUG_PORT:-9222}}
@@ -30,6 +32,7 @@ curl -sf http://127.0.0.1:${PORT}/json/protocol | head -c 200
 ```
 
 ### MCP ヘルスチェック
+
 ```bash
 # .mcp.json から設定確認
 cat .mcp.json | jq '.mcpServers | keys[]'
@@ -41,6 +44,7 @@ done
 ```
 
 ### リソース使用状況
+
 ```bash
 # CPU ロードアベレージ
 uptime
@@ -57,6 +61,7 @@ pgrep -a -f "node" 2>/dev/null
 ```
 
 ### ネットワーク診断
+
 ```bash
 # SSHトンネル（ポートフォワーディング）確認
 ss -tlnp | grep ${PORT}
@@ -71,6 +76,7 @@ curl -sf --connect-timeout 5 http://127.0.0.1:${PORT}/json/version > /dev/null &
 ```
 
 ### tmux セッション診断
+
 ```bash
 # tmux バージョン
 tmux -V
@@ -83,6 +89,7 @@ tmux list-panes -t claude-{project}-{port} -F '#{pane_index}: #{pane_current_com
 ```
 
 ## 診断スクリプト
+
 - `scripts/test/test-devtools-connection.sh [PORT]` — DevTools接続テスト
 - `scripts/tmux/panes/devtools-monitor.sh PORT` — DevTools継続監視
 - `scripts/tmux/panes/mcp-health-monitor.sh` — MCP健全性監視

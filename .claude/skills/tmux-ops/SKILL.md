@@ -7,6 +7,7 @@ allowed-tools: Bash, Read
 # tmux Dashboard Operations
 
 ## 概要
+
 tmux ダッシュボードの操作と管理を行うスキルです。
 
 ## 利用可能なレイアウト
@@ -19,12 +20,14 @@ tmux ダッシュボードの操作と管理を行うスキルです。
 | `debug-team` | 3 (DevTools+MCP, Agent, Log) | デバッグチーム3名 |
 
 ## レイアウト設定ファイル
+
 - パス: `scripts/tmux/layouts/{layout-name}.conf`
 - フォーマット: `PANE_NAME SPLIT_DIR SPLIT_PCT SCRIPT_NAME ARGS`
 
 ## コマンド例
 
 ### レイアウト切替
+
 ```bash
 # 現在のセッションを確認
 tmux list-sessions
@@ -34,6 +37,7 @@ bash scripts/tmux/tmux-dashboard.sh PROJECT_NAME PORT LAYOUT_NAME "cd $(pwd) && 
 ```
 
 ### ペイン操作
+
 ```bash
 # ペイン一覧
 tmux list-panes -t claude-{project}-{port}
@@ -49,6 +53,7 @@ tmux split-window -h -t claude-{project}-{port} 'bash scripts/tmux/panes/devtool
 ```
 
 ### セッション管理
+
 ```bash
 # 既存セッションにアタッチ（SSH切断後の復帰）
 tmux attach-session -t claude-{project}-{port}

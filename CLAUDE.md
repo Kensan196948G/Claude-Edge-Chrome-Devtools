@@ -218,7 +218,7 @@ ssh -t -o ControlMaster=no -o ControlPath=none -R "${PORT}:127.0.0.1:${PORT}" $L
 - **tmux無効で起動したい**: `config.json` で `tmux.enabled: false` に設定
 
 ### SSH接続エラー
-- `windows-dev` ホストへのSSHキーベース認証を確認
+- Linuxホスト（`<your-linux-host>`）へのSSHキーベース認証を確認
 - `~/.ssh/config` でホスト設定を確認
 
 ## ファイル構造
