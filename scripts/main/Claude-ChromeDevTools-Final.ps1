@@ -1508,11 +1508,22 @@ if ! command -v claude &>/dev/null; then
 fi
 
 while true; do
+  set +e
+  set +o pipefail
   # 初期プロンプトをパイプで自動入力
+  # set +e / set +o pipefail 保護:
+  #   cat の SIGPIPE(141) で pipefail がパイプライン終了コードを汚染し、
+  #   set -e がスクリプトを強制終了するのを防ぐ。
+  #   pipefail 無効時: 終了コード = 最後のコマンド(claude)のもの
   (echo "$INIT_PROMPT"; cat) | claude --dangerously-skip-permissions
   EXIT_CODE=$?
+  set -e
+  set -o pipefail
 
+  echo "ℹ️  Claude 終了 (exit code: ${EXIT_CODE})"
+  # 正常終了(0)または Ctrl+C(130) は再起動しない
   [ "$EXIT_CODE" -eq 0 ] && break
+  [ "$EXIT_CODE" -eq 130 ] && break
 
   echo ""
   echo "🔄 Claude 再起動 (${RESTART_DELAY}秒後)..."
