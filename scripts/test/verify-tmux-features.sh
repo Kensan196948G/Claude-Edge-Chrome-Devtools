@@ -169,7 +169,7 @@ check_c5() {
 # ------------------------------------------------------------
 check_c6() {
     local out
-    out=$(ssh_run "find '${REMOTE_BASE}/scripts/tmux/panes/' -maxdepth 1 -name '*.sh' 2>/dev/null | wc -l")
+    out=$(ssh_run "test -d '${REMOTE_BASE}/scripts/tmux/panes/' && find '${REMOTE_BASE}/scripts/tmux/panes/' -maxdepth 1 -name '*.sh' | wc -l || echo 0")
     local count
     count=$(echo "${out}" | tr -d '[:space:]')
     if [ "${count}" -ge 1 ]; then
