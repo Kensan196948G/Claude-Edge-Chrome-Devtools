@@ -1366,17 +1366,20 @@ if ! command -v claude &>/dev/null; then
 fi
 
 while true; do
-  set +e
-  set +o pipefail
-  # 初期プロンプトをパイプで自動入力
-  # set +e / set +o pipefail 保護:
-  #   cat の SIGPIPE(141) で pipefail がパイプライン終了コードを汚染し、
-  #   set -e がスクリプトを強制終了するのを防ぐ。
-  #   pipefail 無効時: 終了コード = 最後のコマンド(claude)のもの
-  (echo "$INIT_PROMPT"; cat) | claude --dangerously-skip-permissions
-  EXIT_CODE=$?
-  set -e
-  set -o pipefail
+  if [ -n "${TMUX:-}" ]; then
+    # tmux 内: TTY 接続を維持して直接実行（パイプなし → インタラクティブモード保証）
+    # パイプを使うと stdin が非 TTY になり Claude がバッチモードで動作して即終了する
+    claude --dangerously-skip-permissions
+    EXIT_CODE=$?
+  else
+    # 非 tmux: INIT_PROMPT をパイプで自動入力（従来方式）
+    set +e
+    set +o pipefail
+    (echo "$INIT_PROMPT"; cat) | claude --dangerously-skip-permissions
+    EXIT_CODE=$?
+    set -e
+    set -o pipefail
+  fi
 
   echo "ℹ️  Claude 終了 (exit code: ${EXIT_CODE})"
   # 正常終了(0)または Ctrl+C(130) は再起動しない
