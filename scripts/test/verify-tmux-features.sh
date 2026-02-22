@@ -169,7 +169,7 @@ check_c5() {
 # ------------------------------------------------------------
 check_c6() {
     local out
-    out=$(ssh_run "ls '${REMOTE_BASE}/scripts/tmux/panes/' 2>&1 | wc -l")
+    out=$(ssh_run "find '${REMOTE_BASE}/scripts/tmux/panes/' -maxdepth 1 -name '*.sh' 2>&1 | wc -l")
     local count
     count=$(echo "${out}" | tr -d '[:space:]')
     if [ "${count}" -ge 1 ] 2>/dev/null; then
@@ -199,7 +199,7 @@ check_c7() {
 check_c8() {
     local out
     out=$(ssh_run "
-        tmux detach-client -s '${SESSION_NAME}' 2>/dev/null || true
+        tmux detach-client -s '${SESSION_NAME}' || true
         tmux has-session -t '${SESSION_NAME}' 2>&1 && echo ALIVE || echo DEAD
     ")
     if echo "${out}" | grep -q "ALIVE"; then
@@ -216,10 +216,10 @@ check_c8() {
 check_c9() {
     local out
     out=$(ssh_run "
-        val=\$(tmux show-environment -t '${SESSION_NAME}' CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS 2>/dev/null || true)
+        val=\$(tmux show-environment -t '${SESSION_NAME}' CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS || true)
         if echo \"\${val}\" | grep -q '=1'; then
             echo ENVVAR_OK
-        elif grep -qr '\"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS\".*\"1\"' ~/.claude/settings.json 2>/dev/null; then
+        elif grep -qr '\"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS\".*\"1\"' ~/.claude/settings.json; then
             echo SETTINGS_OK
         else
             echo NOT_FOUND
