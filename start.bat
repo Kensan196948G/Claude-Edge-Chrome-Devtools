@@ -1,5 +1,5 @@
 @echo off
-setlocal
+setlocal enabledelayedexpansion
 
 rem If running as admin and not in Windows Terminal, relaunch in Windows Terminal
 rem set "isAdmin=0"
@@ -38,6 +38,9 @@ echo.
 echo  [tmux Dashboard]
 echo  10. tmux Dashboard Setup / Diagnostics
 echo.
+echo  [WezTerm]
+echo  11. WezTerm + tmux Launch (SSH直接接続)
+echo.
 echo  0. Exit
 echo.
 echo ===============================================
@@ -55,12 +58,28 @@ if not defined choice (
 if "%choice%"=="1" (
     set "script_name=scripts\main\Claude-EdgeDevTools.ps1"
     set "fast_return=1"
-    goto execute
+    echo.
+    echo  tmux ダッシュボードを使用しますか? (Y/N) [Y]
+    set /p "use_tmux="
+    if /i "!use_tmux!"=="N" (
+        set "tmux_flag="
+    ) else (
+        set "tmux_flag=-TmuxMode"
+    )
+    goto execute_with_flags
 )
 if "%choice%"=="2" (
     set "script_name=scripts\main\Claude-ChromeDevTools-Final.ps1"
     set "fast_return=1"
-    goto execute
+    echo.
+    echo  tmux ダッシュボードを使用しますか? (Y/N) [Y]
+    set /p "use_tmux="
+    if /i "!use_tmux!"=="N" (
+        set "tmux_flag="
+    ) else (
+        set "tmux_flag=-TmuxMode"
+    )
+    goto execute_with_flags
 )
 if "%choice%"=="3" (
     set "script_name=scripts\test\test-edge.ps1"
@@ -94,12 +113,36 @@ if "%choice%"=="10" (
     call :tmux_dashboard
     goto menu
 )
+if "%choice%"=="11" (
+    call :launch_wezterm
+    goto menu
+)
 if "%choice%"=="0" (
     goto :eof
 )
 
 echo.
 echo Invalid number. Please try again.
+pause
+goto menu
+
+
+:execute_with_flags
+cls
+echo Running %script_name%...
+echo.
+pwsh -NoProfile -ExecutionPolicy Bypass -File "%~dp0%script_name%" %tmux_flag%
+if %ERRORLEVEL% neq 0 (
+    echo.
+    echo Warning: An error occurred.
+    pause
+) else (
+    echo.
+    echo Script completed successfully.
+)
+if "%fast_return%"=="1" (
+    goto menu
+)
 pause
 goto menu
 
@@ -443,6 +486,46 @@ pwsh -NoProfile -ExecutionPolicy Bypass -Command ^
   "  Write-Host 'tmux section not found in config.json' -ForegroundColor Yellow " ^
   "}"
 
+echo.
+pause
+goto :eof
+
+
+:launch_wezterm
+cls
+echo.
+echo ===============================================
+echo  WezTerm + tmux Launch
+echo ===============================================
+echo.
+echo リモートホストに WezTerm で SSH 接続し、
+echo tmux セッションに直接アタッチします。
+echo.
+echo プロジェクト名を入力してください:
+set /p "wt_project="
+if not defined wt_project (
+    echo プロジェクト名が入力されていません。
+    pause
+    goto :eof
+)
+echo.
+echo ポート番号 (デフォルト: 9222):
+set /p "wt_port="
+if not defined wt_port set "wt_port=9222"
+
+echo.
+echo 接続中...
+pwsh -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$config = Get-Content '%~dp0config\config.json' -Raw | ConvertFrom-Json; " ^
+  "$h = $config.linuxHost; " ^
+  "$session = 'claude-!wt_project!-!wt_port!'; " ^
+  "Write-Host \"Connecting to $h, session: $session\" -ForegroundColor Cyan; " ^
+  "$wtExe = 'wezterm'; " ^
+  "if (!(Get-Command $wtExe -ErrorAction SilentlyContinue)) { " ^
+  "  $wtExe = Join-Path $env:LOCALAPPDATA 'Programs\WezTerm\wezterm.exe'; " ^
+  "} " ^
+  "Start-Process $wtExe -ArgumentList 'ssh', $h, '--', 'bash', '-c', " ^
+  "  \"tmux attach-session -t $session 2>/dev/null || echo 'Session $session not found. Start with start.bat option 1 or 2 first.'; exec bash\""
 echo.
 pause
 goto :eof
