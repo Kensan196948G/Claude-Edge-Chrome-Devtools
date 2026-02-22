@@ -50,6 +50,22 @@ detect_layout() {
     echo "default"
 }
 
+# ============================================================
+# スクリプト名 → アイコン+ラベル変換
+# ============================================================
+get_pane_label() {
+    local script_name="$1"
+    local pane_name="$2"
+    case "$script_name" in
+        devtools-monitor.sh)    echo "🌐 DevTools Monitor" ;;
+        mcp-health-monitor.sh)  echo "🔌 MCP Health" ;;
+        git-status-monitor.sh)  echo "🌿 Git Status" ;;
+        resource-monitor.sh)    echo "📊 Resources" ;;
+        agent-teams-monitor.sh) echo "🤖 Agent Teams" ;;
+        *)                      echo "📋 ${pane_name}" ;;
+    esac
+}
+
 LAYOUT=$(detect_layout)
 LAYOUT_FILE="${LAYOUTS_DIR}/${LAYOUT}.conf"
 
@@ -114,8 +130,21 @@ tmux set-option -t "$SESSION_NAME" status-right-length 60
 tmux set-option -t "$SESSION_NAME" status-left "#[fg=colour39,bold] ${PROJECT_NAME} #[fg=colour240]| #[fg=colour154]Port:${PORT} "
 tmux set-option -t "$SESSION_NAME" status-right "#[fg=colour240]| #[fg=colour39]${LAYOUT} #[fg=colour240]| #[fg=colour255]%H:%M "
 tmux set-option -t "$SESSION_NAME" status-style "bg=colour235,fg=colour255"
-tmux set-option -t "$SESSION_NAME" pane-active-border-style "fg=colour154"
-tmux set-option -t "$SESSION_NAME" pane-border-style "fg=colour240"
+
+# ペインボーダースタイル
+tmux set-option -t "$SESSION_NAME" pane-active-border-style "fg=colour154,bg=colour235"
+tmux set-option -t "$SESSION_NAME" pane-border-style "fg=colour240,bg=colour235"
+
+# ペインボーダーラベル表示 (tmux 2.6+)
+# アクティブペインは緑+太字、非アクティブはグレーで役割名を表示
+tmux set-option -t "$SESSION_NAME" pane-border-status top 2>/dev/null || true
+tmux set-option -t "$SESSION_NAME" pane-border-format "#{?pane_active,#[bg=colour22,fg=colour154,bold],#[bg=colour237,fg=colour245]} #{pane_title} #[default]" 2>/dev/null || true
+
+# マウスサポート有効化 (tmux 2.1+)
+# ・マウスドラッグでペイン境界をリサイズ
+# ・クリックでペイン選択
+# ・スクロールホイールでペイン内スクロール
+tmux set-option -t "$SESSION_NAME" mouse on 2>/dev/null || true
 
 # ============================================================
 # ペイン分割 & モニタリングスクリプト起動
@@ -143,11 +172,16 @@ for pane_def in "${PANE_DEFS[@]}"; do
     script_args="${script_args//__PORT__/$PORT}"
     script_args="${script_args//__PROJECT__/$PROJECT_NAME}"
 
+    # ペインタイトル設定（アイコン + 役割名）
+    pane_label=$(get_pane_label "$script_name" "$_pane_name")
+    tmux select-pane -t "${SESSION_NAME}.${PANE_INDEX}" -T "$pane_label" 2>/dev/null || true
+
     # モニタリングスクリプト起動
     tmux send-keys -t "${SESSION_NAME}.${PANE_INDEX}" "bash '${local_script}' ${script_args}" C-m
 done
 
-# メインペイン（pane 0）を選択して Claude Code を起動
+# メインペイン（pane 0）のタイトル設定と Claude Code 起動
+tmux select-pane -t "${SESSION_NAME}.0" -T "🤖 Claude Code [${PROJECT_NAME}]" 2>/dev/null || true
 tmux select-pane -t "${SESSION_NAME}.0"
 tmux send-keys -t "${SESSION_NAME}.0" "${CLAUDE_CMD}" C-m
 
