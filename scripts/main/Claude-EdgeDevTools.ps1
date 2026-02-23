@@ -1365,30 +1365,41 @@ if ! command -v claude &>/dev/null; then
     exit 1
 fi
 
+_INIT_INJECTED=0
 while true; do
   if [ -n "${TMUX:-}" ]; then
     # tmux 内: TTY 接続を維持して直接実行（パイプなし → インタラクティブモード保証）
     # パイプを使うと stdin が非 TTY になり Claude がバッチモードで動作して即終了する
     echo "🔍 [診断] TMUX=${TMUX:-} | claude=$(command -v claude 2>/dev/null || echo '未発見')"
     # INIT_PROMPT を tmux バッファ経由で注入（TTY を保持しながら送信）
-    INIT_FILE="/tmp/claude_init_${PORT:-$$}.txt"
-    printf '%s\n' "$INIT_PROMPT" > "$INIT_FILE"
-    # バックグラウンドで遅延注入（Claude 起動後 6 秒待ってから貼り付け）
-    (
-        sleep 6
-        if [ -f "$INIT_FILE" ] && [ -n "${TMUX_PANE:-}" ]; then
-            tmux load-buffer "$INIT_FILE"
-            tmux paste-buffer -t "$TMUX_PANE" -d
-            rm -f "$INIT_FILE"
-        fi
-    ) &
-    INJECT_PID=$!
+    # 最初の起動時のみ注入する（再起動ループでの多重注入を防止）
+    if [ "$_INIT_INJECTED" = "0" ]; then
+      INIT_FILE="/tmp/claude_init_${PORT:-$$}.txt"
+      printf '%s\n' "$INIT_PROMPT" > "$INIT_FILE"
+      # バックグラウンドで遅延注入（Claude 起動後 6 秒待ってから貼り付け）
+      # 並列セッションとのバッファ競合を防ぐため名前付きバッファを使用
+      (
+          sleep 6
+          if [ -f "$INIT_FILE" ] && [ -n "${TMUX_PANE:-}" ]; then
+              tmux load-buffer -b "claude_init_${PORT}" "$INIT_FILE"
+              tmux paste-buffer -b "claude_init_${PORT}" -t "$TMUX_PANE" -d
+              rm -f "$INIT_FILE"
+          else
+              echo "⚠️  [INIT_PROMPT] TMUX_PANE が未設定のため注入をスキップ" >&2
+              rm -f "$INIT_FILE"
+          fi
+      ) &
+      INJECT_PID=$!
+      _INIT_INJECTED=1
+    else
+      INJECT_PID=""
+    fi
     # set +e: claude 非ゼロ終了時に set -e でスクリプトが即終了しないよう明示的に無効化
     set +e
     claude --dangerously-skip-permissions
     EXIT_CODE=$?
     set -e
-    kill "$INJECT_PID" 2>/dev/null || true
+    [ -n "$INJECT_PID" ] && kill "$INJECT_PID" 2>/dev/null || true
     rm -f "$INIT_FILE" 2>/dev/null || true
   else
     # 非 tmux: INIT_PROMPT をパイプで自動入力（従来方式）
