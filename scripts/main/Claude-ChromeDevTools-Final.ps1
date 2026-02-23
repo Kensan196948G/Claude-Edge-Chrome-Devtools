@@ -26,7 +26,10 @@ param(
     [switch]$SkipBrowser,            # CI環境用（ブラウザ起動スキップ）
 
     [Parameter(Mandatory=$false)]
-    [switch]$TmuxMode                # start.bat から渡される tmux フラグ
+    [switch]$TmuxMode,               # start.bat から渡される tmux フラグ
+
+    [Parameter(Mandatory=$false)]
+    [string]$Layout = ""             # start.bat から渡されるレイアウト名
 )
 
 $ErrorActionPreference = "Stop"
@@ -930,6 +933,7 @@ RESTART_DELAY=3
 
 # tmux ダッシュボード設定
 TMUX_ENABLED=__TMUX_ENABLED__
+TMUX_AUTO_INSTALL=__TMUX_AUTO_INSTALL__
 TMUX_LAYOUT="__TMUX_LAYOUT__"
 PROJECT_NAME="__PROJECT_NAME__"
 SCRIPTS_TMUX_DIR="__SCRIPTS_TMUX_DIR__"
@@ -1470,6 +1474,21 @@ test_devtools_connection() {
 # 詳細テスト実行
 test_devtools_connection
 
+# === tmux 自動インストール (autoInstall: true 時) ===
+if [ "$TMUX_ENABLED" = "true" ] && [ "$TMUX_AUTO_INSTALL" = "true" ] && ! command -v tmux &>/dev/null; then
+    echo "ℹ️  tmux が見つかりません。自動インストールを試みます..."
+    INSTALL_SCRIPT="${SCRIPTS_TMUX_DIR}/tmux-install.sh"
+    if [ -f "$INSTALL_SCRIPT" ]; then
+        if bash "$INSTALL_SCRIPT"; then
+            echo "✅ tmux インストール完了"
+        else
+            echo "⚠️  tmux インストール失敗。通常モードで続行します。"
+        fi
+    else
+        echo "⚠️  tmux-install.sh が見つかりません: ${INSTALL_SCRIPT}"
+    fi
+fi
+
 # === tmux ダッシュボード起動 ===
 # TMUX 環境変数が未設定 = tmux の外からの初回起動
 # → tmux-dashboard.sh へ exec（メインペインで run-claude.sh を再実行）
@@ -1507,16 +1526,42 @@ if ! command -v claude &>/dev/null; then
     exit 1
 fi
 
+_INIT_INJECTED=0
 while true; do
   if [ -n "${TMUX:-}" ]; then
     # tmux 内: TTY 接続を維持して直接実行（パイプなし → インタラクティブモード保証）
     # パイプを使うと stdin が非 TTY になり Claude がバッチモードで動作して即終了する
     echo "🔍 [診断] TMUX=${TMUX:-} | claude=$(command -v claude 2>/dev/null || echo '未発見')"
+    # INIT_PROMPT を tmux バッファ経由で注入（TTY を保持しながら送信）
+    # 最初の起動時のみ注入する（再起動ループでの多重注入を防止）
+    if [ "$_INIT_INJECTED" = "0" ]; then
+      INIT_FILE="/tmp/claude_init_${PORT:-$}.txt"
+      printf '%s\n' "$INIT_PROMPT" > "$INIT_FILE"
+      # バックグラウンドで遅延注入（Claude 起動後 6 秒待ってから貼り付け）
+      # 並列セッションとのバッファ競合を防ぐため名前付きバッファを使用
+      (
+          sleep 6
+          if [ -f "$INIT_FILE" ] && [ -n "${TMUX_PANE:-}" ]; then
+              tmux load-buffer -b "claude_init_${PORT}" "$INIT_FILE"
+              tmux paste-buffer -b "claude_init_${PORT}" -t "$TMUX_PANE" -d
+              rm -f "$INIT_FILE"
+          else
+              echo "⚠️  [INIT_PROMPT] TMUX_PANE が未設定のため注入をスキップ" >&2
+              rm -f "$INIT_FILE"
+          fi
+      ) &
+      INJECT_PID=$!
+      _INIT_INJECTED=1
+    else
+      INJECT_PID=""
+    fi
     # set +e: claude 非ゼロ終了時に set -e でスクリプトが即終了しないよう明示的に無効化
     set +e
     claude --dangerously-skip-permissions
     EXIT_CODE=$?
     set -e
+    [ -n "$INJECT_PID" ] && kill "$INJECT_PID" 2>/dev/null || true
+    rm -f "$INIT_FILE" 2>/dev/null || true
   else
     # 非 tmux: INIT_PROMPT をパイプで自動入力（従来方式）
     set +e
@@ -1545,10 +1590,12 @@ $RunClaude = $RunClaude -replace '__DEVTOOLS_PORT__', $DevToolsPort
 
 # tmux 設定値を置換
 $TmuxEnabled = if ($TmuxMode -or ($Config.tmux -and $Config.tmux.enabled)) { "true" } else { "false" }
-$TmuxLayout = if ($Config.tmux -and $Config.tmux.defaultLayout) { $Config.tmux.defaultLayout } else { "auto" }
+$TmuxAutoInstallEarly = if ($Config.tmux -and $Config.tmux.autoInstall) { "true" } else { "false" }
+$TmuxLayout = if ($Layout -ne "") { $Layout } elseif ($Config.tmux -and $Config.tmux.defaultLayout) { $Config.tmux.defaultLayout } else { "auto" }
 $TmuxScriptsDir = "$LinuxBase/$ProjectName/scripts/tmux"
 
 $RunClaude = $RunClaude -replace '__TMUX_ENABLED__', $TmuxEnabled
+$RunClaude = $RunClaude -replace '__TMUX_AUTO_INSTALL__', $TmuxAutoInstallEarly
 $RunClaude = $RunClaude -replace '__TMUX_LAYOUT__', $TmuxLayout
 $RunClaude = $RunClaude -replace '__PROJECT_NAME__', $ProjectName
 $RunClaude = $RunClaude -replace '__SCRIPTS_TMUX_DIR__', $TmuxScriptsDir
