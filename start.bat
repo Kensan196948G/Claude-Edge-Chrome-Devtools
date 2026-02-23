@@ -1,5 +1,4 @@
 @echo off
-chcp 65001 >nul
 setlocal enabledelayedexpansion
 
 rem If running as admin and not in Windows Terminal, relaunch in Windows Terminal
