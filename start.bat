@@ -14,43 +14,44 @@ rem )
 cls
 echo.
 echo ===============================================
-echo  PowerShell Script Launcher Menu
+echo  PowerShell スクリプト ランチャー
 echo ===============================================
 echo.
-echo  [Claude DevTools Main]
-echo  1. Claude Edge DevTools Setup
-echo  2. Claude Chrome DevTools Setup
+echo  [Claude DevTools メイン]
+echo  1. Claude Edge DevTools セットアップ
+echo  2. Claude Chrome DevTools セットアップ
 echo.
-echo  [Test and Utility]
-echo  3. Edge DevTools Connection Test
-echo  4. Chrome DevTools Connection Test
+echo  [テスト / ユーティリティ]
+echo  3. Edge DevTools 接続テスト
+echo  4. Chrome DevTools 接続テスト
 echo.
-echo  [Windows Terminal Settings]
-echo  5. Windows Terminal Setup Guide
-echo  6. Auto-Configure Windows Terminal (PowerShell)
+echo  [Windows Terminal 設定]
+echo  5. Windows Terminal セットアップ ガイド
+echo  6. Windows Terminal 自動設定（PowerShell）
 echo.
-echo  [Diagnostics]
-echo  7. MCP Health Check
-echo  8. Drive Mapping Diagnostic
+echo  [診断]
+echo  7. MCP ヘルスチェック
+echo  8. ドライブマッピング診断
 echo.
-echo  [Batch Operations]
-echo  9. Launch Multiple Projects
+echo  [一括操作]
+echo  9. 複数プロジェクト同時起動
 echo.
-echo  [tmux Dashboard]
-echo  10. tmux Dashboard Setup / Diagnostics
+echo  [tmux ダッシュボード]
+echo  10. tmux ダッシュボード セットアップ / 診断
 echo.
 echo  [WezTerm]
-echo  11. WezTerm + tmux Launch (SSH直接接続)
+echo  11. WezTerm + tmux 起動（SSH 直接接続）
 echo.
-echo  0. Exit
+echo  0. 終了
 echo.
 echo ===============================================
-echo  Recommended: Use Windows Terminal for better display
+echo  推奨: 文字化けを防ぐため Windows Terminal をご利用ください
 echo ===============================================
 echo.
 
 set "fast_return=0"
-set /p "choice=Enter the number of the script to run: "
+set "choice="
+set /p "choice=番号を入力してください: "
 
 if not defined choice (
     goto menu
@@ -59,57 +60,15 @@ if not defined choice (
 if "%choice%"=="1" (
     set "script_name=scripts\main\Claude-EdgeDevTools.ps1"
     set "fast_return=1"
-    echo.
-    echo  tmux レイアウトを選択してください:
-    echo    0. なし（通常起動・tmux を使用しない）
-    echo    1. auto（Agent Teams 構成を自動検出）[デフォルト]
-    echo    2. default（2ペイン: Claude + モニタリング）
-    echo    3. review-team（4ペイン: レビューチーム）
-    echo    4. fullstack-dev-team（6ペイン: フルスタック開発チーム）
-    echo    5. debug-team（3ペイン: デバッグチーム）
-    echo.
-    set /p "layout_choice=選択 [0-5]（デフォルト: 1）: "
-    if "!layout_choice!"=="0" (
-        set "tmux_flag="
-    ) else if "!layout_choice!"=="2" (
-        set "tmux_flag=-TmuxMode -Layout default"
-    ) else if "!layout_choice!"=="3" (
-        set "tmux_flag=-TmuxMode -Layout review-team"
-    ) else if "!layout_choice!"=="4" (
-        set "tmux_flag=-TmuxMode -Layout fullstack-dev-team"
-    ) else if "!layout_choice!"=="5" (
-        set "tmux_flag=-TmuxMode -Layout debug-team"
-    ) else (
-        set "tmux_flag=-TmuxMode -Layout auto"
-    )
+    call :tmux_layout_select
+    if "!tmux_back!"=="1" goto menu
     goto execute_with_flags
 )
 if "%choice%"=="2" (
     set "script_name=scripts\main\Claude-ChromeDevTools-Final.ps1"
     set "fast_return=1"
-    echo.
-    echo  tmux レイアウトを選択してください:
-    echo    0. なし（通常起動・tmux を使用しない）
-    echo    1. auto（Agent Teams 構成を自動検出）[デフォルト]
-    echo    2. default（2ペイン: Claude + モニタリング）
-    echo    3. review-team（4ペイン: レビューチーム）
-    echo    4. fullstack-dev-team（6ペイン: フルスタック開発チーム）
-    echo    5. debug-team（3ペイン: デバッグチーム）
-    echo.
-    set /p "layout_choice=選択 [0-5]（デフォルト: 1）: "
-    if "!layout_choice!"=="0" (
-        set "tmux_flag="
-    ) else if "!layout_choice!"=="2" (
-        set "tmux_flag=-TmuxMode -Layout default"
-    ) else if "!layout_choice!"=="3" (
-        set "tmux_flag=-TmuxMode -Layout review-team"
-    ) else if "!layout_choice!"=="4" (
-        set "tmux_flag=-TmuxMode -Layout fullstack-dev-team"
-    ) else if "!layout_choice!"=="5" (
-        set "tmux_flag=-TmuxMode -Layout debug-team"
-    ) else (
-        set "tmux_flag=-TmuxMode -Layout auto"
-    )
+    call :tmux_layout_select
+    if "!tmux_back!"=="1" goto menu
     goto execute_with_flags
 )
 if "%choice%"=="3" (
@@ -153,23 +112,23 @@ if "%choice%"=="0" (
 )
 
 echo.
-echo Invalid number. Please try again.
+echo 無効な番号です。もう一度入力してください。
 pause
 goto menu
 
 
 :execute_with_flags
 cls
-echo Running %script_name%...
+echo %script_name% を実行しています...
 echo.
 pwsh -NoProfile -ExecutionPolicy Bypass -File "%~dp0%script_name%" %tmux_flag%
-if %ERRORLEVEL% neq 0 (
+if !ERRORLEVEL! neq 0 (
     echo.
-    echo Warning: An error occurred.
+    echo 警告: エラーが発生しました。
     pause
 ) else (
     echo.
-    echo Script completed successfully.
+    echo スクリプトが正常に完了しました。
 )
 if "%fast_return%"=="1" (
     goto menu
@@ -180,16 +139,16 @@ goto menu
 
 :execute
 cls
-echo Running %script_name%...
+echo %script_name% を実行しています...
 echo.
 pwsh -NoProfile -ExecutionPolicy Bypass -File "%~dp0%script_name%"
-if %ERRORLEVEL% neq 0 (
+if !ERRORLEVEL! neq 0 (
     echo.
-    echo Warning: An error occurred.
+    echo 警告: エラーが発生しました。
     pause
 ) else (
     echo.
-    echo Script completed successfully.
+    echo スクリプトが正常に完了しました。
 )
 if "%fast_return%"=="1" (
     goto menu
@@ -202,31 +161,31 @@ goto menu
 cls
 echo.
 echo ===============================================
-echo  Windows Terminal Setup Guide
+echo  Windows Terminal セットアップ ガイド
 echo ===============================================
 echo.
-echo What is Windows Terminal?
-echo  A modern terminal application for Windows 10/11.
-echo  Provides better fonts, color themes, tabs, etc.
+echo Windows Terminal とは？
+echo  Windows 10/11 向けのモダンなターミナルアプリです。
+echo  優れたフォント、カラーテーマ、タブ機能などを提供します。
 echo.
-echo Recommended Settings:
-echo  Font: Cascadia Code (Size: 14-16)
-echo  Color Theme: One Half Dark or Campbell
-echo  Background Opacity: 95%% (Acrylic effect)
-echo  Cursor: Bar (vertical line)
+echo 推奨設定:
+echo  フォント: Cascadia Code（サイズ: 14-16）
+echo  カラーテーマ: One Half Dark または Campbell
+echo  背景の不透明度: 95%%（アクリル効果）
+echo  カーソル: バー（縦棒）
 echo.
-echo Installation:
-echo  1. Search "Windows Terminal" in Microsoft Store
-echo  2. Or run: winget install Microsoft.WindowsTerminal
+echo インストール方法:
+echo  1. Microsoft Store で "Windows Terminal" を検索
+echo  2. または: winget install Microsoft.WindowsTerminal
 echo.
-echo Useful Shortcuts:
-echo  Ctrl + +        : Increase font size
-echo  Ctrl + -        : Decrease font size
-echo  Ctrl + 0        : Reset font size
-echo  Ctrl + Shift + , : Open settings
-echo  Alt + Enter     : Toggle fullscreen
+echo 便利なショートカット:
+echo  Ctrl + +          : フォントサイズを大きく
+echo  Ctrl + -          : フォントサイズを小さく
+echo  Ctrl + 0          : フォントサイズをリセット
+echo  Ctrl + Shift + ,  : 設定を開く
+echo  Alt + Enter       : フルスクリーン切替
 echo.
-echo Press any key to return to menu...
+echo 任意のキーを押してメニューへ戻ります...
 pause >nul
 goto :eof
 
@@ -235,36 +194,37 @@ goto :eof
 cls
 echo.
 echo ===============================================
-echo  Windows Terminal Auto-Configuration
+echo  Windows Terminal 自動設定
 echo ===============================================
 echo.
-echo This will run a PowerShell script to create
-echo an optimized profile for Claude DevTools.
+echo PowerShell スクリプトを実行して
+echo Claude DevTools 向け最適化プロファイルを作成します。
 echo.
-echo Settings to be created:
-echo  Profile Name: Claude DevTools
-echo  Font: Cascadia Code (Size 18)
-echo  Color Theme: One Half Light (Bright)
-echo  Background Opacity: 95%%
-echo  Cursor: Bar (white)
+echo 作成される設定:
+echo  プロファイル名: Claude DevTools
+echo  フォント: Cascadia Code（サイズ 18）
+echo  カラーテーマ: One Half Light（明るい）
+echo  背景の不透明度: 95%%
+echo  カーソル: バー（白）
 echo.
-echo Execute? (Y/N)
+echo 実行しますか？ (Y=実行 / N=戻る)
+set "confirm="
 set /p "confirm="
 
 if /i "%confirm%"=="Y" (
     echo.
-    echo Running PowerShell script...
+    echo PowerShell スクリプトを実行しています...
     powershell -ExecutionPolicy Bypass -File "%~dp0scripts\setup\setup-windows-terminal.ps1"
     echo.
-    if %ERRORLEVEL% neq 0 (
-        echo Configuration failed. Please check the error above.
+    if !ERRORLEVEL! neq 0 (
+        echo 設定に失敗しました。上記のエラーを確認してください。
     ) else (
-        echo Configuration completed.
+        echo 設定が完了しました。
     )
     pause
 ) else (
     echo.
-    echo Cancelled.
+    echo キャンセルしました。
     pause
 )
 goto :eof
@@ -274,13 +234,13 @@ goto :eof
 cls
 echo.
 echo ===============================================
-echo  MCP Health Check
-===============================================
+echo  MCP ヘルスチェック
+echo ===============================================
 echo.
-echo This will check the connection status of all
-echo 8 MCP servers configured in your project.
+echo プロジェクトに設定されている 8 つの MCP サーバーの
+echo 接続状態を確認します。
 echo.
-echo Available MCP Servers:
+echo 対象 MCP サーバー:
 echo  - brave-search
 echo  - ChromeDevTools
 echo  - context7
@@ -290,18 +250,22 @@ echo  - playwright
 echo  - sequential-thinking
 echo  - plugin:claude-mem:mem-search
 echo.
-echo Project? (Enter project name or press Enter to skip)
+echo プロジェクト名を入力してください（スキップは Enter）:
+set "project_name="
 set /p "project_name="
 
 if defined project_name (
     echo.
-    echo Running MCP health check for project: %project_name%...
+    echo プロジェクト: %project_name% の MCP ヘルスチェックを実行しています...
     echo.
-    pwsh -NoProfile -ExecutionPolicy Bypass -Command "ssh kensan1969 'cd /mnt/LinuxHDD/%project_name% && if [ -f scripts/health-check/mcp-health.sh ]; then bash scripts/health-check/mcp-health.sh; else echo \"Error: mcp-health.sh not found. Please run from the main Claude-EdgeChromeDevTools directory or ensure the project has the health check script.\"; fi' 2>&1"
+    pwsh -NoProfile -ExecutionPolicy Bypass -Command ^
+      "$config = Get-Content '%~dp0config\config.json' -Raw | ConvertFrom-Json; " ^
+      "$h = $config.linuxHost; " ^
+      "ssh $h 'cd /mnt/LinuxHDD/%project_name% && if [ -f scripts/health-check/mcp-health.sh ]; then bash scripts/health-check/mcp-health.sh; else echo \"Error: mcp-health.sh not found.\"; fi' 2>&1"
     echo.
 ) else (
     echo.
-    echo Skipped.
+    echo スキップしました。
 )
 
 pause
@@ -312,13 +276,13 @@ goto :eof
 cls
 echo.
 echo ===============================================
-echo  Drive Mapping Diagnostic
-===============================================
+echo  ドライブマッピング診断
+echo ===============================================
 echo.
-echo This will diagnose X:\ drive accessibility
-echo and show all available detection methods.
+echo X:\ ドライブのアクセス可能性を診断し、
+echo 利用可能なすべての検出方法を表示します。
 echo.
-echo Press any key to run diagnostic...
+echo 任意のキーを押して診断を開始します...
 pause >nul
 
 pwsh -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\test\test-drive-mapping.ps1"
@@ -332,19 +296,18 @@ goto :eof
 cls
 echo.
 echo ===============================================
-echo  Launch Multiple Projects
-===============================================
+echo  複数プロジェクト同時起動
+echo ===============================================
 echo.
-echo This will allow you to select and launch
-echo multiple projects simultaneously with
-echo dedicated browser profiles and ports.
+echo 専用ブラウザプロファイルとポートを割り当てて
+echo 複数のプロジェクトを同時に起動できます。
 echo.
-echo How to select:
-echo   Single project: 3
-echo   Multiple projects: 1,3,5
-echo   Range selection: 1-3
+echo 選択方法:
+echo   単一プロジェクト: 3
+echo   複数プロジェクト: 1,3,5
+echo   範囲指定:         1-3
 echo.
-echo Press any key to continue...
+echo 任意のキーを押して続行します...
 pause >nul
 
 pwsh -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\main\Claude-ChromeDevTools-Final.ps1"
@@ -358,18 +321,19 @@ goto :eof
 cls
 echo.
 echo ===============================================
-echo  tmux Dashboard Setup / Diagnostics
+echo  tmux ダッシュボード セットアップ / 診断
 echo ===============================================
 echo.
-echo  1. Check tmux installation status (remote)
-echo  2. Install/update tmux (remote)
-echo  3. Test dashboard layout (remote)
-echo  4. Show tmux configuration
+echo  1. tmux インストール状態確認（リモート）
+echo  2. tmux インストール / 更新（リモート）
+echo  3. ダッシュボード レイアウトテスト
+echo  4. tmux 設定を表示
 echo.
-echo  0. Return to main menu
+echo  0. メインメニューへ戻る
 echo.
 echo ===============================================
-set /p "tmux_choice=Enter number: "
+set "tmux_choice="
+set /p "tmux_choice=番号を入力してください: "
 
 if "%tmux_choice%"=="1" (
     call :tmux_check
@@ -391,7 +355,7 @@ if "%tmux_choice%"=="0" (
     goto :eof
 )
 echo.
-echo Invalid number.
+echo 無効な番号です。もう一度入力してください。
 pause
 goto :tmux_dashboard
 
@@ -400,17 +364,17 @@ goto :tmux_dashboard
 cls
 echo.
 echo ===============================================
-echo  tmux Installation Status
+echo  tmux インストール状態確認
 echo ===============================================
 echo.
-echo Checking remote Linux host...
+echo リモート Linux ホストを確認しています...
 echo.
 
 pwsh -NoProfile -ExecutionPolicy Bypass -Command ^
   "$config = Get-Content '%~dp0config\config.json' -Raw | ConvertFrom-Json; " ^
   "$host_name = $config.linuxHost; " ^
-  "Write-Host \"Host: $host_name\" -ForegroundColor Cyan; " ^
-  "ssh $host_name 'echo \"=== tmux version ===\"; tmux -V 2>/dev/null || echo \"tmux is NOT installed\"; echo \"\"; echo \"=== tmux sessions ===\"; tmux list-sessions 2>/dev/null || echo \"No active sessions\"; echo \"\"; echo \"=== tmux install path ===\"; which tmux 2>/dev/null || echo \"Not found in PATH\"'"
+  "Write-Host \"ホスト: $host_name\" -ForegroundColor Cyan; " ^
+  "ssh $host_name 'echo \"=== tmux バージョン ===\"; tmux -V 2>/dev/null || echo \"tmux はインストールされていません\"; echo \"\"; echo \"=== アクティブセッション ===\"; tmux list-sessions 2>/dev/null || echo \"アクティブなセッションはありません\"; echo \"\"; echo \"=== tmux インストールパス ===\"; which tmux 2>/dev/null || echo \"PATH に見つかりません\"'"
 
 echo.
 pause
@@ -421,24 +385,25 @@ goto :eof
 cls
 echo.
 echo ===============================================
-echo  tmux Install / Update
+echo  tmux インストール / 更新
 echo ===============================================
 echo.
-echo This will install or update tmux on the
-echo remote Linux host using the auto-install script.
+echo リモート Linux ホストに tmux を
+echo 自動インストールスクリプトでインストール／更新します。
 echo.
-echo Execute? (Y/N)
+echo 実行しますか？ (Y=実行 / N=戻る)
+set "tmux_confirm="
 set /p "tmux_confirm="
 
 if /i not "%tmux_confirm%"=="Y" (
     echo.
-    echo Cancelled.
+    echo キャンセルしました。
     pause
     goto :eof
 )
 
 echo.
-echo Running tmux-install.sh on remote host...
+echo リモートホストで tmux-install.sh を実行しています...
 echo.
 pwsh -NoProfile -ExecutionPolicy Bypass -Command ^
   "$config = Get-Content '%~dp0config\config.json' -Raw | ConvertFrom-Json; " ^
@@ -458,16 +423,21 @@ goto :eof
 cls
 echo.
 echo ===============================================
-echo  tmux Dashboard Layout Test
+echo  tmux ダッシュボード レイアウトテスト
 echo ===============================================
 echo.
-echo Available layouts:
-echo  1. default       (2 side panes)
-echo  2. review-team   (4 side panes, 2x2)
-echo  3. fullstack-dev (6 side panes, 3x2)
-echo  4. debug-team    (3 side panes)
+echo 利用可能なレイアウト:
+echo  1. default        （サイドペイン 2 枚）
+echo  2. review-team    （サイドペイン 4 枚、2x2）
+echo  3. fullstack-dev  （サイドペイン 6 枚、3x2）
+echo  4. debug-team     （サイドペイン 3 枚）
+echo  0. 戻る
 echo.
-set /p "layout_choice=Select layout (1-4): "
+set "layout_choice="
+set /p "layout_choice=レイアウトを選択してください (0-4): "
+
+if "!layout_choice!"=="0" goto :eof
+if "!layout_choice!"=="" goto :eof
 
 set "layout_name=default"
 if "%layout_choice%"=="1" set "layout_name=default"
@@ -476,13 +446,13 @@ if "%layout_choice%"=="3" set "layout_name=fullstack-dev-team"
 if "%layout_choice%"=="4" set "layout_name=debug-team"
 
 echo.
-echo Testing layout: %layout_name%
+echo レイアウト "%layout_name%" を確認しています...
 echo.
 
 pwsh -NoProfile -ExecutionPolicy Bypass -Command ^
   "$config = Get-Content '%~dp0config\config.json' -Raw | ConvertFrom-Json; " ^
   "$host_name = $config.linuxHost; " ^
-  "Write-Host 'Layout file content:' -ForegroundColor Cyan; " ^
+  "Write-Host 'レイアウトファイルの内容:' -ForegroundColor Cyan; " ^
   "Get-Content '%~dp0scripts\tmux\layouts\%layout_name%.conf' | Write-Host"
 
 echo.
@@ -494,29 +464,29 @@ goto :eof
 cls
 echo.
 echo ===============================================
-echo  tmux Configuration
+echo  tmux 設定表示
 echo ===============================================
 echo.
 
 pwsh -NoProfile -ExecutionPolicy Bypass -Command ^
   "$config = Get-Content '%~dp0config\config.json' -Raw | ConvertFrom-Json; " ^
   "if ($config.tmux) { " ^
-  "  Write-Host 'tmux settings:' -ForegroundColor Cyan; " ^
-  "  Write-Host \"  Enabled:      $($config.tmux.enabled)\"; " ^
-  "  Write-Host \"  Auto Install: $($config.tmux.autoInstall)\"; " ^
-  "  Write-Host \"  Layout:       $($config.tmux.defaultLayout)\"; " ^
+  "  Write-Host 'tmux 設定:' -ForegroundColor Cyan; " ^
+  "  Write-Host \"  有効:           $($config.tmux.enabled)\"; " ^
+  "  Write-Host \"  自動インストール: $($config.tmux.autoInstall)\"; " ^
+  "  Write-Host \"  レイアウト:     $($config.tmux.defaultLayout)\"; " ^
   "  Write-Host ''; " ^
-  "  Write-Host 'Pane settings:' -ForegroundColor Cyan; " ^
+  "  Write-Host 'ペイン設定:' -ForegroundColor Cyan; " ^
   "  $config.tmux.panes.PSObject.Properties | ForEach-Object { " ^
   "    Write-Host \"  $($_.Name): enabled=$($_.Value.enabled), interval=$($_.Value.refreshInterval)s\" " ^
   "  }; " ^
   "  Write-Host ''; " ^
-  "  Write-Host 'Theme:' -ForegroundColor Cyan; " ^
+  "  Write-Host 'テーマ:' -ForegroundColor Cyan; " ^
   "  $config.tmux.theme.PSObject.Properties | ForEach-Object { " ^
   "    Write-Host \"  $($_.Name): $($_.Value)\" " ^
   "  } " ^
   "} else { " ^
-  "  Write-Host 'tmux section not found in config.json' -ForegroundColor Yellow " ^
+  "  Write-Host 'config.json に tmux セクションが見つかりません' -ForegroundColor Yellow " ^
   "}"
 
 echo.
@@ -528,13 +498,14 @@ goto :eof
 cls
 echo.
 echo ===============================================
-echo  WezTerm + tmux Launch
+echo  WezTerm + tmux 起動
 echo ===============================================
 echo.
 echo リモートホストに WezTerm で SSH 接続し、
 echo tmux セッションに直接アタッチします。
 echo.
 echo プロジェクト名を入力してください:
+set "wt_project="
 set /p "wt_project="
 if not defined wt_project (
     echo プロジェクト名が入力されていません。
@@ -542,23 +513,61 @@ if not defined wt_project (
     goto :eof
 )
 echo.
-echo ポート番号 (デフォルト: 9222):
+echo ポート番号（デフォルト: 9222）:
+set "wt_port="
 set /p "wt_port="
 if not defined wt_port set "wt_port=9222"
 
 echo.
-echo 接続中...
+echo 接続しています...
 pwsh -NoProfile -ExecutionPolicy Bypass -Command ^
   "$config = Get-Content '%~dp0config\config.json' -Raw | ConvertFrom-Json; " ^
   "$h = $config.linuxHost; " ^
   "$session = 'claude-!wt_project!-!wt_port!'; " ^
-  "Write-Host \"Connecting to $h, session: $session\" -ForegroundColor Cyan; " ^
+  "Write-Host \"接続先: $h  セッション: $session\" -ForegroundColor Cyan; " ^
   "$wtExe = 'wezterm'; " ^
   "if (-not (Get-Command $wtExe -ErrorAction SilentlyContinue)) { " ^
   "  $wtExe = Join-Path $env:LOCALAPPDATA 'Programs\WezTerm\wezterm.exe'; " ^
   "} " ^
   "Start-Process $wtExe -ArgumentList 'ssh', $h, '--', 'bash', '-c', " ^
-  "  \"tmux attach-session -t $session 2>/dev/null || echo 'Session $session not found. Start with start.bat option 1 or 2 first.'; exec bash\""
+  "  \"tmux attach-session -t $session 2>/dev/null || echo 'セッション $session が見つかりません。先に選択肢 1 か 2 で起動してください。'; exec bash\""
 echo.
 pause
+goto :eof
+
+
+:tmux_layout_select
+echo.
+echo -----------------------------------------------
+echo  tmux レイアウトを選択してください
+echo -----------------------------------------------
+echo    0. なし（通常起動・tmux を使用しない）
+echo    1. auto（Agent Teams 構成を自動検出）[デフォルト]
+echo    2. default（2ペイン: Claude + モニタリング）
+echo    3. review-team（4ペイン: レビューチーム）
+echo    4. fullstack-dev-team（6ペイン: フルスタック開発チーム）
+echo    5. debug-team（3ペイン: デバッグチーム）
+echo    9. 戻る（メインメニューへ）
+echo.
+set "layout_choice="
+set "tmux_flag="
+set "tmux_back=0"
+set /p "layout_choice=選択 [0-5, 9]（デフォルト: 1）: "
+if "!layout_choice!"=="9" (
+    set "tmux_back=1"
+    goto :eof
+)
+if "!layout_choice!"=="0" (
+    set "tmux_flag="
+) else if "!layout_choice!"=="2" (
+    set "tmux_flag=-TmuxMode -Layout default"
+) else if "!layout_choice!"=="3" (
+    set "tmux_flag=-TmuxMode -Layout review-team"
+) else if "!layout_choice!"=="4" (
+    set "tmux_flag=-TmuxMode -Layout fullstack-dev-team"
+) else if "!layout_choice!"=="5" (
+    set "tmux_flag=-TmuxMode -Layout debug-team"
+) else (
+    set "tmux_flag=-TmuxMode -Layout auto"
+)
 goto :eof
