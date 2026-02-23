@@ -1269,7 +1269,7 @@ GitHub（リモート origin）および GitHub Actions 上の自動実行と整
 
 Agent Teams は以下のいずれかの方法で有効化されている前提とする：
 
-\`\`\`bash
+```bash
 # 方法1: 環境変数で設定
 export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 
@@ -1280,7 +1280,7 @@ export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   }
 }
-\`\`\`
+```
 
 ### SubAgent と Agent Teams の使い分け
 
@@ -1326,7 +1326,7 @@ export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 
 ### Agent Teams 利用例
 
-\`\`\`
+```
 # PR レビューを複数観点で同時実施
 「PR #142 をレビューするために Agent Teams を作成してください。
   - セキュリティ担当：脆弱性・入力バリデーションの観点
@@ -1340,7 +1340,7 @@ export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
   - フロントエンド担当：ログインUI・トークン管理（feature/auth-frontend ブランチ）
   - テスト担当：E2Eテスト・統合テスト設計（feature/auth-tests ブランチ）
 各担当は独立した WorkTree で作業し、API仕様はリードが調整してください。」
-\`\`\`
+```
 
 ## 【ブラウザ自動化ツール使い分けガイド】
 
@@ -1368,7 +1368,7 @@ export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 - 複雑な操作フロー（ドラッグ&ドロップ、複数タブ操作等）
 
 **接続確認方法**：
-\`\`\`bash
+```bash
 # 環境変数 MCP_CHROME_DEBUG_PORT（または CLAUDE_CHROME_DEBUG_PORT）が設定されていることを確認
 echo \$MCP_CHROME_DEBUG_PORT
 
@@ -1377,7 +1377,7 @@ curl -s http://127.0.0.1:\${MCP_CHROME_DEBUG_PORT}/json/version | jq '.'
 
 # 利用可能なタブ一覧
 curl -s http://127.0.0.1:\${MCP_CHROME_DEBUG_PORT}/json/list | jq '.'
-\`\`\`
+```
 
 **利用可能なMCPツール**：
 - \`mcp__plugin_puppeteer_puppeteer__navigate\`: ページ遷移
@@ -1405,10 +1405,10 @@ curl -s http://127.0.0.1:\${MCP_CHROME_DEBUG_PORT}/json/list | jq '.'
 - ログイン認証を含む自動テストフロー（認証情報をコードで管理）
 
 **接続確認方法**：
-\`\`\`bash
+```bash
 # Playwrightインストール確認（通常はMCPサーバーが自動管理）
 # 特別な環境変数設定は不要（MCPサーバーが自動起動）
-\`\`\`
+```
 
 **利用可能なMCPツール**：
 - \`mcp__plugin_playwright_playwright__browser_navigate\`: ページ遷移
@@ -1422,7 +1422,7 @@ curl -s http://127.0.0.1:\${MCP_CHROME_DEBUG_PORT}/json/list | jq '.'
 
 ### 使い分けの判断フロー
 
-\`\`\`
+```
 既存ブラウザの状態（ログイン・Cookie等）を利用したい？
 ├─ YES → Puppeteer MCP
 │         （Windows側ブラウザに接続、環境変数 MCP_CHROME_DEBUG_PORT 使用）
@@ -1433,7 +1433,7 @@ curl -s http://127.0.0.1:\${MCP_CHROME_DEBUG_PORT}/json/list | jq '.'
           ├─ スクレイピング？ → Playwright MCP
           ├─ クロスブラウザ検証？ → Playwright MCP
           └─ 手動操作との併用が必要？ → Puppeteer MCP
-\`\`\`
+```
 
 ### 注意事項
 
