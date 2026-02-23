@@ -5,7 +5,8 @@
 # ============================================================
 
 param(
-    [switch]$TmuxMode = $false   # start.bat から渡される tmux フラグ
+    [switch]$TmuxMode = $false,  # start.bat から渡される tmux フラグ
+    [string]$Layout = ""         # start.bat から渡されるレイアウト名
 )
 
 $ErrorActionPreference = "Stop"
@@ -1446,7 +1447,7 @@ $RunClaude = $RunClaude -replace '__DEVTOOLS_PORT__', $DevToolsPort
 # tmux 設定値を置換
 $TmuxEnabled = if ($TmuxMode -or ($Config.tmux -and $Config.tmux.enabled)) { "true" } else { "false" }
 $TmuxAutoInstallEarly = if ($Config.tmux -and $Config.tmux.autoInstall) { "true" } else { "false" }
-$TmuxLayout = if ($Config.tmux -and $Config.tmux.defaultLayout) { $Config.tmux.defaultLayout } else { "auto" }
+$TmuxLayout = if ($Layout -ne "") { $Layout } elseif ($Config.tmux -and $Config.tmux.defaultLayout) { $Config.tmux.defaultLayout } else { "auto" }
 $TmuxScriptsDir = "$LinuxBase/$ProjectName/scripts/tmux"
 
 $RunClaude = $RunClaude -replace '__TMUX_ENABLED__', $TmuxEnabled
