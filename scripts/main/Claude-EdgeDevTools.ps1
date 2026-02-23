@@ -790,6 +790,7 @@ RESTART_DELAY=3
 
 # tmux ダッシュボード設定
 TMUX_ENABLED=__TMUX_ENABLED__
+TMUX_AUTO_INSTALL=__TMUX_AUTO_INSTALL__
 TMUX_LAYOUT="__TMUX_LAYOUT__"
 PROJECT_NAME="__PROJECT_NAME__"
 SCRIPTS_TMUX_DIR="__SCRIPTS_TMUX_DIR__"
@@ -1329,12 +1330,11 @@ test_devtools_connection() {
 test_devtools_connection
 
 # === tmux 自動インストール (autoInstall: true 時) ===
-if [ "$TMUX_ENABLED" = "true" ] && ! command -v tmux &>/dev/null; then
+if [ "$TMUX_ENABLED" = "true" ] && [ "$TMUX_AUTO_INSTALL" = "true" ] && ! command -v tmux &>/dev/null; then
     echo "ℹ️  tmux が見つかりません。自動インストールを試みます..."
     INSTALL_SCRIPT="${SCRIPTS_TMUX_DIR}/tmux-install.sh"
     if [ -f "$INSTALL_SCRIPT" ]; then
-        bash "$INSTALL_SCRIPT"
-        if command -v tmux &>/dev/null; then
+        if bash "$INSTALL_SCRIPT"; then
             echo "✅ tmux インストール完了"
         else
             echo "⚠️  tmux インストール失敗。通常モードで続行します。"
@@ -1445,10 +1445,12 @@ $RunClaude = $RunClaude -replace '__DEVTOOLS_PORT__', $DevToolsPort
 
 # tmux 設定値を置換
 $TmuxEnabled = if ($TmuxMode -or ($Config.tmux -and $Config.tmux.enabled)) { "true" } else { "false" }
+$TmuxAutoInstallEarly = if ($Config.tmux -and $Config.tmux.autoInstall) { "true" } else { "false" }
 $TmuxLayout = if ($Config.tmux -and $Config.tmux.defaultLayout) { $Config.tmux.defaultLayout } else { "auto" }
 $TmuxScriptsDir = "$LinuxBase/$ProjectName/scripts/tmux"
 
 $RunClaude = $RunClaude -replace '__TMUX_ENABLED__', $TmuxEnabled
+$RunClaude = $RunClaude -replace '__TMUX_AUTO_INSTALL__', $TmuxAutoInstallEarly
 $RunClaude = $RunClaude -replace '__TMUX_LAYOUT__', $TmuxLayout
 $RunClaude = $RunClaude -replace '__PROJECT_NAME__', $ProjectName
 $RunClaude = $RunClaude -replace '__SCRIPTS_TMUX_DIR__', $TmuxScriptsDir
