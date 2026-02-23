@@ -1567,13 +1567,12 @@ while true; do
     [ -n "$INJECT_PID" ] && kill "$INJECT_PID" 2>/dev/null || true
     rm -f "$INIT_FILE" 2>/dev/null || true
   else
-    # 非 tmux: INIT_PROMPT をパイプで自動入力（従来方式）
+    # 非 tmux: Claude を直接起動（TTY 維持）
+    # パイプ入力は stdin を非 TTY にし TUI が表示されないため直接起動
     set +e
-    set +o pipefail
-    (echo "$INIT_PROMPT"; cat) | claude --dangerously-skip-permissions
+    claude --dangerously-skip-permissions
     EXIT_CODE=$?
     set -e
-    set -o pipefail
   fi
 
   echo "ℹ️  Claude 終了 (exit code: ${EXIT_CODE})"
