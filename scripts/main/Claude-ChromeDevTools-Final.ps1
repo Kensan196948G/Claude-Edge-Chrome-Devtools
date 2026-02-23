@@ -1543,7 +1543,11 @@ while true; do
           sleep 6
           if [ -f "$INIT_FILE" ] && [ -n "${TMUX_PANE:-}" ]; then
               tmux load-buffer -b "claude_init_${PORT}" "$INIT_FILE"
-              tmux paste-buffer -b "claude_init_${PORT}" -t "$TMUX_PANE" -d
+              # -p: ブラケットペーストモードで送信（各\nをEnterとして処理しない）
+              tmux paste-buffer -b "claude_init_${PORT}" -t "$TMUX_PANE" -p -d
+              sleep 0.3
+              # ペースト完了後にEnterを送信してINIT_PROMPTを確実に提出
+              tmux send-keys -t "$TMUX_PANE" Enter
               rm -f "$INIT_FILE"
           else
               echo "⚠️  [INIT_PROMPT] TMUX_PANE が未設定のため注入をスキップ" >&2
