@@ -1328,6 +1328,22 @@ test_devtools_connection() {
 # 詳細テスト実行
 test_devtools_connection
 
+# === tmux 自動インストール (autoInstall: true 時) ===
+if [ "$TMUX_ENABLED" = "true" ] && ! command -v tmux &>/dev/null; then
+    echo "ℹ️  tmux が見つかりません。自動インストールを試みます..."
+    INSTALL_SCRIPT="${SCRIPTS_TMUX_DIR}/tmux-install.sh"
+    if [ -f "$INSTALL_SCRIPT" ]; then
+        bash "$INSTALL_SCRIPT"
+        if command -v tmux &>/dev/null; then
+            echo "✅ tmux インストール完了"
+        else
+            echo "⚠️  tmux インストール失敗。通常モードで続行します。"
+        fi
+    else
+        echo "⚠️  tmux-install.sh が見つかりません: ${INSTALL_SCRIPT}"
+    fi
+fi
+
 # === tmux ダッシュボード起動 ===
 # TMUX 環境変数が未設定 = tmux の外からの初回起動
 # → tmux-dashboard.sh へ exec（メインペインで run-claude.sh を再実行）
