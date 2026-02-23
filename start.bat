@@ -13,44 +13,44 @@ rem )
 cls
 echo.
 echo ===============================================
-echo  PowerShell ƒXƒNƒŠƒvƒg ƒ‰ƒ“ƒ`ƒƒ[
+echo  PowerShell ï¿½Xï¿½Nï¿½ï¿½ï¿½vï¿½g ï¿½ï¿½ï¿½ï¿½ï¿½`ï¿½ï¿½ï¿½[
 echo ===============================================
 echo.
-echo  [Claude DevTools ƒƒCƒ“]
-echo  1. Claude Edge DevTools ƒZƒbƒgƒAƒbƒv
-echo  2. Claude Chrome DevTools ƒZƒbƒgƒAƒbƒv
+echo  [Claude DevTools ï¿½ï¿½ï¿½Cï¿½ï¿½]
+echo  1. Claude Edge DevTools ï¿½Zï¿½bï¿½gï¿½Aï¿½bï¿½v
+echo  2. Claude Chrome DevTools ï¿½Zï¿½bï¿½gï¿½Aï¿½bï¿½v
 echo.
-echo  [ƒeƒXƒg / ƒ†[ƒeƒBƒŠƒeƒB]
-echo  3. Edge DevTools Ú‘±ƒeƒXƒg
-echo  4. Chrome DevTools Ú‘±ƒeƒXƒg
+echo  [ï¿½eï¿½Xï¿½g / ï¿½ï¿½ï¿½[ï¿½eï¿½Bï¿½ï¿½ï¿½eï¿½B]
+echo  3. Edge DevTools ï¿½Ú‘ï¿½ï¿½eï¿½Xï¿½g
+echo  4. Chrome DevTools ï¿½Ú‘ï¿½ï¿½eï¿½Xï¿½g
 echo.
-echo  [Windows Terminal İ’è]
-echo  5. Windows Terminal ƒZƒbƒgƒAƒbƒv ƒKƒCƒh
-echo  6. Windows Terminal ©“®İ’èiPowerShellj
+echo  [Windows Terminal ï¿½İ’ï¿½]
+echo  5. Windows Terminal ï¿½Zï¿½bï¿½gï¿½Aï¿½bï¿½v ï¿½Kï¿½Cï¿½h
+echo  6. Windows Terminal ï¿½ï¿½ï¿½ï¿½ï¿½İ’ï¿½iPowerShellï¿½j
 echo.
-echo  [f’f]
-echo  7. MCP ƒwƒ‹ƒXƒ`ƒFƒbƒN
-echo  8. ƒhƒ‰ƒCƒuƒ}ƒbƒsƒ“ƒOf’f
+echo  [ï¿½fï¿½f]
+echo  7. MCP ï¿½wï¿½ï¿½ï¿½Xï¿½`ï¿½Fï¿½bï¿½N
+echo  8. ï¿½hï¿½ï¿½ï¿½Cï¿½uï¿½}ï¿½bï¿½sï¿½ï¿½ï¿½Oï¿½fï¿½f
 echo.
-echo  [ˆêŠ‡‘€ì]
-echo  9. •¡”ƒvƒƒWƒFƒNƒg“¯‹N“®
+echo  [ï¿½êŠ‡ï¿½ï¿½ï¿½ï¿½]
+echo  9. ï¿½ï¿½ï¿½ï¿½ï¿½vï¿½ï¿½ï¿½Wï¿½Fï¿½Nï¿½gï¿½ï¿½ï¿½ï¿½ï¿½Nï¿½ï¿½
 echo.
-echo  [tmux ƒ_ƒbƒVƒ…ƒ{[ƒh]
-echo  10. tmux ƒ_ƒbƒVƒ…ƒ{[ƒh ƒZƒbƒgƒAƒbƒv / f’f
+echo  [tmux ï¿½_ï¿½bï¿½Vï¿½ï¿½ï¿½{ï¿½[ï¿½h]
+echo  10. tmux ï¿½_ï¿½bï¿½Vï¿½ï¿½ï¿½{ï¿½[ï¿½h ï¿½Zï¿½bï¿½gï¿½Aï¿½bï¿½v / ï¿½fï¿½f
 echo.
 echo  [WezTerm]
-echo  11. WezTerm + tmux ‹N“®iSSH ’¼ÚÚ‘±j
+echo  11. WezTerm + tmux ï¿½Nï¿½ï¿½ï¿½iSSH ï¿½ï¿½ï¿½ÚÚ‘ï¿½ï¿½j
 echo.
-echo  0. I—¹
+echo  0. ï¿½Iï¿½ï¿½
 echo.
 echo ===============================================
-echo  „§: •¶š‰»‚¯‚ğ–h‚®‚½‚ß Windows Terminal ‚ğ‚²—˜—p‚­‚¾‚³‚¢
+echo  ï¿½ï¿½ï¿½ï¿½: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½hï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Windows Terminal ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½pï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 echo ===============================================
 echo.
 
 set "fast_return=0"
 set "choice="
-set /p "choice=”Ô†‚ğ“ü—Í‚µ‚Ä‚­‚¾‚³‚¢: "
+set /p "choice=ï¿½Ôï¿½ï¿½ï¿½ï¿½ï¿½Í‚ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½: "
 
 if not defined choice (
     goto menu
@@ -111,23 +111,23 @@ if "%choice%"=="0" (
 )
 
 echo.
-echo –³Œø‚È”Ô†‚Å‚·B‚à‚¤ˆê“x“ü—Í‚µ‚Ä‚­‚¾‚³‚¢B
+echo ï¿½ï¿½ï¿½ï¿½ï¿½È”Ôï¿½ï¿½Å‚ï¿½ï¿½Bï¿½ï¿½ï¿½ï¿½ï¿½ï¿½xï¿½ï¿½ï¿½Í‚ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½B
 pause
 goto menu
 
 
 :execute_with_flags
 cls
-echo %script_name% ‚ğÀs‚µ‚Ä‚¢‚Ü‚·...
+echo %script_name% ï¿½ï¿½ï¿½ï¿½ï¿½sï¿½ï¿½ï¿½Ä‚ï¿½ï¿½Ü‚ï¿½...
 echo.
 pwsh -NoProfile -ExecutionPolicy Bypass -File "%~dp0%script_name%" %tmux_flag%
 if !ERRORLEVEL! neq 0 (
     echo.
-    echo Œx: ƒGƒ‰[‚ª”­¶‚µ‚Ü‚µ‚½B
+    echo ï¿½xï¿½ï¿½: ï¿½Gï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½ï¿½B
     pause
 ) else (
     echo.
-    echo ƒXƒNƒŠƒvƒg‚ª³í‚ÉŠ®—¹‚µ‚Ü‚µ‚½B
+    echo ï¿½Xï¿½Nï¿½ï¿½ï¿½vï¿½gï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÉŠï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½ï¿½B
 )
 if "%fast_return%"=="1" (
     goto menu
@@ -138,16 +138,16 @@ goto menu
 
 :execute
 cls
-echo %script_name% ‚ğÀs‚µ‚Ä‚¢‚Ü‚·...
+echo %script_name% ï¿½ï¿½ï¿½ï¿½ï¿½sï¿½ï¿½ï¿½Ä‚ï¿½ï¿½Ü‚ï¿½...
 echo.
 pwsh -NoProfile -ExecutionPolicy Bypass -File "%~dp0%script_name%"
 if !ERRORLEVEL! neq 0 (
     echo.
-    echo Œx: ƒGƒ‰[‚ª”­¶‚µ‚Ü‚µ‚½B
+    echo ï¿½xï¿½ï¿½: ï¿½Gï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½ï¿½B
     pause
 ) else (
     echo.
-    echo ƒXƒNƒŠƒvƒg‚ª³í‚ÉŠ®—¹‚µ‚Ü‚µ‚½B
+    echo ï¿½Xï¿½Nï¿½ï¿½ï¿½vï¿½gï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÉŠï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½ï¿½B
 )
 if "%fast_return%"=="1" (
     goto menu
@@ -160,31 +160,31 @@ goto menu
 cls
 echo.
 echo ===============================================
-echo  Windows Terminal ƒZƒbƒgƒAƒbƒv ƒKƒCƒh
+echo  Windows Terminal ï¿½Zï¿½bï¿½gï¿½Aï¿½bï¿½v ï¿½Kï¿½Cï¿½h
 echo ===============================================
 echo.
-echo Windows Terminal ‚Æ‚ÍH
-echo  Windows 10/11 Œü‚¯‚Ìƒ‚ƒ_ƒ“‚Èƒ^[ƒ~ƒiƒ‹ƒAƒvƒŠ‚Å‚·B
-echo  —D‚ê‚½ƒtƒHƒ“ƒgAƒJƒ‰[ƒe[ƒ}Aƒ^ƒu‹@”\‚È‚Ç‚ğ’ñ‹Ÿ‚µ‚Ü‚·B
+echo Windows Terminal ï¿½Æ‚ÍH
+echo  Windows 10/11 ï¿½ï¿½ï¿½ï¿½ï¿½Ìƒï¿½ï¿½_ï¿½ï¿½ï¿½Èƒ^ï¿½[ï¿½~ï¿½iï¿½ï¿½ï¿½Aï¿½vï¿½ï¿½ï¿½Å‚ï¿½ï¿½B
+echo  ï¿½Dï¿½ê‚½ï¿½tï¿½Hï¿½ï¿½ï¿½gï¿½Aï¿½Jï¿½ï¿½ï¿½[ï¿½eï¿½[ï¿½}ï¿½Aï¿½^ï¿½uï¿½@ï¿½\ï¿½È‚Ç‚ï¿½ñ‹Ÿ‚ï¿½ï¿½Ü‚ï¿½ï¿½B
 echo.
-echo „§İ’è:
-echo  ƒtƒHƒ“ƒg: Cascadia CodeiƒTƒCƒY: 14-16j
-echo  ƒJƒ‰[ƒe[ƒ}: One Half Dark ‚Ü‚½‚Í Campbell
-echo  ”wŒi‚Ì•s“§–¾“x: 95%%iƒAƒNƒŠƒ‹Œø‰Êj
-echo  ƒJ[ƒ\ƒ‹: ƒo[ic–_j
+echo ï¿½ï¿½ï¿½ï¿½ï¿½İ’ï¿½:
+echo  ï¿½tï¿½Hï¿½ï¿½ï¿½g: Cascadia Codeï¿½iï¿½Tï¿½Cï¿½Y: 14-16ï¿½j
+echo  ï¿½Jï¿½ï¿½ï¿½[ï¿½eï¿½[ï¿½}: One Half Dark ï¿½Ü‚ï¿½ï¿½ï¿½ Campbell
+echo  ï¿½wï¿½iï¿½Ì•sï¿½ï¿½ï¿½ï¿½ï¿½x: 95%%ï¿½iï¿½Aï¿½Nï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Êj
+echo  ï¿½Jï¿½[ï¿½\ï¿½ï¿½: ï¿½oï¿½[ï¿½iï¿½cï¿½_ï¿½j
 echo.
-echo ƒCƒ“ƒXƒg[ƒ‹•û–@:
-echo  1. Microsoft Store ‚Å "Windows Terminal" ‚ğŒŸõ
-echo  2. ‚Ü‚½‚Í: winget install Microsoft.WindowsTerminal
+echo ï¿½Cï¿½ï¿½ï¿½Xï¿½gï¿½[ï¿½ï¿½ï¿½ï¿½ï¿½@:
+echo  1. Microsoft Store ï¿½ï¿½ "Windows Terminal" ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+echo  2. ï¿½Ü‚ï¿½ï¿½ï¿½: winget install Microsoft.WindowsTerminal
 echo.
-echo •Ö—˜‚ÈƒVƒ‡[ƒgƒJƒbƒg:
-echo  Ctrl + +          : ƒtƒHƒ“ƒgƒTƒCƒY‚ğ‘å‚«‚­
-echo  Ctrl + -          : ƒtƒHƒ“ƒgƒTƒCƒY‚ğ¬‚³‚­
-echo  Ctrl + 0          : ƒtƒHƒ“ƒgƒTƒCƒY‚ğƒŠƒZƒbƒg
-echo  Ctrl + Shift + ,  : İ’è‚ğŠJ‚­
-echo  Alt + Enter       : ƒtƒ‹ƒXƒNƒŠ[ƒ“Ø‘Ö
+echo ï¿½Ö—ï¿½ï¿½ÈƒVï¿½ï¿½ï¿½[ï¿½gï¿½Jï¿½bï¿½g:
+echo  Ctrl + +          : ï¿½tï¿½Hï¿½ï¿½ï¿½gï¿½Tï¿½Cï¿½Yï¿½ï¿½å‚«ï¿½ï¿½
+echo  Ctrl + -          : ï¿½tï¿½Hï¿½ï¿½ï¿½gï¿½Tï¿½Cï¿½Yï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+echo  Ctrl + 0          : ï¿½tï¿½Hï¿½ï¿½ï¿½gï¿½Tï¿½Cï¿½Yï¿½ï¿½ï¿½ï¿½ï¿½Zï¿½bï¿½g
+echo  Ctrl + Shift + ,  : ï¿½İ’ï¿½ï¿½ï¿½Jï¿½ï¿½
+echo  Alt + Enter       : ï¿½tï¿½ï¿½ï¿½Xï¿½Nï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½Ø‘ï¿½
 echo.
-echo ”CˆÓ‚ÌƒL[‚ğ‰Ÿ‚µ‚Äƒƒjƒ…[‚Ö–ß‚è‚Ü‚·...
+echo ï¿½Cï¿½Ó‚ÌƒLï¿½[ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Äƒï¿½ï¿½jï¿½ï¿½ï¿½[ï¿½Ö–ß‚ï¿½Ü‚ï¿½...
 pause >nul
 goto :eof
 
@@ -193,37 +193,37 @@ goto :eof
 cls
 echo.
 echo ===============================================
-echo  Windows Terminal ©“®İ’è
+echo  Windows Terminal ï¿½ï¿½ï¿½ï¿½ï¿½İ’ï¿½
 echo ===============================================
 echo.
-echo PowerShell ƒXƒNƒŠƒvƒg‚ğÀs‚µ‚Ä
-echo Claude DevTools Œü‚¯Å“K‰»ƒvƒƒtƒ@ƒCƒ‹‚ğì¬‚µ‚Ü‚·B
+echo PowerShell ï¿½Xï¿½Nï¿½ï¿½ï¿½vï¿½gï¿½ï¿½ï¿½ï¿½ï¿½sï¿½ï¿½ï¿½ï¿½
+echo Claude DevTools ï¿½ï¿½ï¿½ï¿½ï¿½Å“Kï¿½ï¿½ï¿½vï¿½ï¿½ï¿½tï¿½@ï¿½Cï¿½ï¿½ï¿½ï¿½ï¿½ì¬ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½B
 echo.
-echo ì¬‚³‚ê‚éİ’è:
-echo  ƒvƒƒtƒ@ƒCƒ‹–¼: Claude DevTools
-echo  ƒtƒHƒ“ƒg: Cascadia CodeiƒTƒCƒY 18j
-echo  ƒJƒ‰[ƒe[ƒ}: One Half Lighti–¾‚é‚¢j
-echo  ”wŒi‚Ì•s“§–¾“x: 95%%
-echo  ƒJ[ƒ\ƒ‹: ƒo[i”’j
+echo ï¿½ì¬ï¿½ï¿½ï¿½ï¿½ï¿½İ’ï¿½:
+echo  ï¿½vï¿½ï¿½ï¿½tï¿½@ï¿½Cï¿½ï¿½ï¿½ï¿½: Claude DevTools
+echo  ï¿½tï¿½Hï¿½ï¿½ï¿½g: Cascadia Codeï¿½iï¿½Tï¿½Cï¿½Y 18ï¿½j
+echo  ï¿½Jï¿½ï¿½ï¿½[ï¿½eï¿½[ï¿½}: One Half Lightï¿½iï¿½ï¿½ï¿½é‚¢ï¿½j
+echo  ï¿½wï¿½iï¿½Ì•sï¿½ï¿½ï¿½ï¿½ï¿½x: 95%%
+echo  ï¿½Jï¿½[ï¿½\ï¿½ï¿½: ï¿½oï¿½[ï¿½iï¿½ï¿½ï¿½j
 echo.
-echo Às‚µ‚Ü‚·‚©H (Y=Às / N=–ß‚é)
+echo ï¿½ï¿½ï¿½sï¿½ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½ï¿½H (Y=ï¿½ï¿½ï¿½s / N=ï¿½ß‚ï¿½)
 set "confirm="
 set /p "confirm="
 
 if /i "%confirm%"=="Y" (
     echo.
-    echo PowerShell ƒXƒNƒŠƒvƒg‚ğÀs‚µ‚Ä‚¢‚Ü‚·...
+    echo PowerShell ï¿½Xï¿½Nï¿½ï¿½ï¿½vï¿½gï¿½ï¿½ï¿½ï¿½ï¿½sï¿½ï¿½ï¿½Ä‚ï¿½ï¿½Ü‚ï¿½...
     powershell -ExecutionPolicy Bypass -File "%~dp0scripts\setup\setup-windows-terminal.ps1"
     echo.
     if !ERRORLEVEL! neq 0 (
-        echo İ’è‚É¸”s‚µ‚Ü‚µ‚½Bã‹L‚ÌƒGƒ‰[‚ğŠm”F‚µ‚Ä‚­‚¾‚³‚¢B
+        echo ï¿½İ’ï¿½Éï¿½ï¿½sï¿½ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½ï¿½Bï¿½ï¿½Lï¿½ÌƒGï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½mï¿½Fï¿½ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½B
     ) else (
-        echo İ’è‚ªŠ®—¹‚µ‚Ü‚µ‚½B
+        echo ï¿½İ’è‚ªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½ï¿½B
     )
     pause
 ) else (
     echo.
-    echo ƒLƒƒƒ“ƒZƒ‹‚µ‚Ü‚µ‚½B
+    echo ï¿½Lï¿½ï¿½ï¿½ï¿½ï¿½Zï¿½ï¿½ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½ï¿½B
     pause
 )
 goto :eof
@@ -233,13 +233,13 @@ goto :eof
 cls
 echo.
 echo ===============================================
-echo  MCP ƒwƒ‹ƒXƒ`ƒFƒbƒN
+echo  MCP ï¿½wï¿½ï¿½ï¿½Xï¿½`ï¿½Fï¿½bï¿½N
 echo ===============================================
 echo.
-echo ƒvƒƒWƒFƒNƒg‚Éİ’è‚³‚ê‚Ä‚¢‚é 8 ‚Â‚Ì MCP ƒT[ƒo[‚Ì
-echo Ú‘±ó‘Ô‚ğŠm”F‚µ‚Ü‚·B
+echo ï¿½vï¿½ï¿½ï¿½Wï¿½Fï¿½Nï¿½gï¿½Éİ’è‚³ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½ 8 ï¿½Â‚ï¿½ MCP ï¿½Tï¿½[ï¿½oï¿½[ï¿½ï¿½
+echo ï¿½Ú‘ï¿½ï¿½ï¿½Ô‚ï¿½ï¿½mï¿½Fï¿½ï¿½ï¿½Ü‚ï¿½ï¿½B
 echo.
-echo ‘ÎÛ MCP ƒT[ƒo[:
+echo ï¿½Îï¿½ MCP ï¿½Tï¿½[ï¿½oï¿½[:
 echo  - brave-search
 echo  - ChromeDevTools
 echo  - context7
@@ -249,13 +249,13 @@ echo  - playwright
 echo  - sequential-thinking
 echo  - plugin:claude-mem:mem-search
 echo.
-echo ƒvƒƒWƒFƒNƒg–¼‚ğ“ü—Í‚µ‚Ä‚­‚¾‚³‚¢iƒXƒLƒbƒv‚Í Enterj:
+echo ï¿½vï¿½ï¿½ï¿½Wï¿½Fï¿½Nï¿½gï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í‚ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½iï¿½Xï¿½Lï¿½bï¿½vï¿½ï¿½ Enterï¿½j:
 set "project_name="
 set /p "project_name="
 
 if defined project_name (
     echo.
-    echo ƒvƒƒWƒFƒNƒg: %project_name% ‚Ì MCP ƒwƒ‹ƒXƒ`ƒFƒbƒN‚ğÀs‚µ‚Ä‚¢‚Ü‚·...
+    echo ï¿½vï¿½ï¿½ï¿½Wï¿½Fï¿½Nï¿½g: %project_name% ï¿½ï¿½ MCP ï¿½wï¿½ï¿½ï¿½Xï¿½`ï¿½Fï¿½bï¿½Nï¿½ï¿½ï¿½ï¿½ï¿½sï¿½ï¿½ï¿½Ä‚ï¿½ï¿½Ü‚ï¿½...
     echo.
     pwsh -NoProfile -ExecutionPolicy Bypass -Command ^
       "$config = Get-Content '%~dp0config\config.json' -Raw | ConvertFrom-Json; " ^
@@ -264,7 +264,7 @@ if defined project_name (
     echo.
 ) else (
     echo.
-    echo ƒXƒLƒbƒv‚µ‚Ü‚µ‚½B
+    echo ï¿½Xï¿½Lï¿½bï¿½vï¿½ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½ï¿½B
 )
 
 pause
@@ -275,13 +275,13 @@ goto :eof
 cls
 echo.
 echo ===============================================
-echo  ƒhƒ‰ƒCƒuƒ}ƒbƒsƒ“ƒOf’f
+echo  ï¿½hï¿½ï¿½ï¿½Cï¿½uï¿½}ï¿½bï¿½sï¿½ï¿½ï¿½Oï¿½fï¿½f
 echo ===============================================
 echo.
-echo X:\ ƒhƒ‰ƒCƒu‚ÌƒAƒNƒZƒX‰Â”\«‚ğf’f‚µA
-echo —˜—p‰Â”\‚È‚·‚×‚Ä‚ÌŒŸo•û–@‚ğ•\¦‚µ‚Ü‚·B
+echo X:\ ï¿½hï¿½ï¿½ï¿½Cï¿½uï¿½ÌƒAï¿½Nï¿½Zï¿½Xï¿½Â”\ï¿½ï¿½ï¿½ï¿½fï¿½fï¿½ï¿½ï¿½A
+echo ï¿½ï¿½ï¿½pï¿½Â”\ï¿½È‚ï¿½ï¿½×‚Ä‚ÌŒï¿½ï¿½oï¿½ï¿½ï¿½@ï¿½ï¿½\ï¿½ï¿½ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½B
 echo.
-echo ”CˆÓ‚ÌƒL[‚ğ‰Ÿ‚µ‚Äf’f‚ğŠJn‚µ‚Ü‚·...
+echo ï¿½Cï¿½Ó‚ÌƒLï¿½[ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Äfï¿½fï¿½ï¿½ï¿½Jï¿½nï¿½ï¿½ï¿½Ü‚ï¿½...
 pause >nul
 
 pwsh -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\test\test-drive-mapping.ps1"
@@ -295,18 +295,18 @@ goto :eof
 cls
 echo.
 echo ===============================================
-echo  •¡”ƒvƒƒWƒFƒNƒg“¯‹N“®
+echo  ï¿½ï¿½ï¿½ï¿½ï¿½vï¿½ï¿½ï¿½Wï¿½Fï¿½Nï¿½gï¿½ï¿½ï¿½ï¿½ï¿½Nï¿½ï¿½
 echo ===============================================
 echo.
-echo ê—pƒuƒ‰ƒEƒUƒvƒƒtƒ@ƒCƒ‹‚Æƒ|[ƒg‚ğŠ„‚è“–‚Ä‚Ä
-echo •¡”‚ÌƒvƒƒWƒFƒNƒg‚ğ“¯‚É‹N“®‚Å‚«‚Ü‚·B
+echo ï¿½ï¿½pï¿½uï¿½ï¿½ï¿½Eï¿½Uï¿½vï¿½ï¿½ï¿½tï¿½@ï¿½Cï¿½ï¿½ï¿½Æƒ|ï¿½[ï¿½gï¿½ï¿½ï¿½ï¿½ï¿½è“–ï¿½Ä‚ï¿½
+echo ï¿½ï¿½ï¿½ï¿½ï¿½Ìƒvï¿½ï¿½ï¿½Wï¿½Fï¿½Nï¿½gï¿½ğ“¯ï¿½ï¿½É‹Nï¿½ï¿½ï¿½Å‚ï¿½ï¿½Ü‚ï¿½ï¿½B
 echo.
-echo ‘I‘ğ•û–@:
-echo   ’PˆêƒvƒƒWƒFƒNƒg: 3
-echo   •¡”ƒvƒƒWƒFƒNƒg: 1,3,5
-echo   ”ÍˆÍw’è:         1-3
+echo ï¿½Iï¿½ï¿½ï¿½ï¿½@:
+echo   ï¿½Pï¿½ï¿½vï¿½ï¿½ï¿½Wï¿½Fï¿½Nï¿½g: 3
+echo   ï¿½ï¿½ï¿½ï¿½ï¿½vï¿½ï¿½ï¿½Wï¿½Fï¿½Nï¿½g: 1,3,5
+echo   ï¿½ÍˆÍwï¿½ï¿½:         1-3
 echo.
-echo ”CˆÓ‚ÌƒL[‚ğ‰Ÿ‚µ‚Ä‘±s‚µ‚Ü‚·...
+echo ï¿½Cï¿½Ó‚ÌƒLï¿½[ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä‘ï¿½ï¿½sï¿½ï¿½ï¿½Ü‚ï¿½...
 pause >nul
 
 pwsh -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\main\Claude-ChromeDevTools-Final.ps1"
@@ -320,19 +320,19 @@ goto :eof
 cls
 echo.
 echo ===============================================
-echo  tmux ƒ_ƒbƒVƒ…ƒ{[ƒh ƒZƒbƒgƒAƒbƒv / f’f
+echo  tmux ï¿½_ï¿½bï¿½Vï¿½ï¿½ï¿½{ï¿½[ï¿½h ï¿½Zï¿½bï¿½gï¿½Aï¿½bï¿½v / ï¿½fï¿½f
 echo ===============================================
 echo.
-echo  1. tmux ƒCƒ“ƒXƒg[ƒ‹ó‘ÔŠm”FiƒŠƒ‚[ƒgj
-echo  2. tmux ƒCƒ“ƒXƒg[ƒ‹ / XViƒŠƒ‚[ƒgj
-echo  3. ƒ_ƒbƒVƒ…ƒ{[ƒh ƒŒƒCƒAƒEƒgƒeƒXƒg
-echo  4. tmux İ’è‚ğ•\¦
+echo  1. tmux ï¿½Cï¿½ï¿½ï¿½Xï¿½gï¿½[ï¿½ï¿½ï¿½ï¿½ÔŠmï¿½Fï¿½iï¿½ï¿½ï¿½ï¿½ï¿½[ï¿½gï¿½j
+echo  2. tmux ï¿½Cï¿½ï¿½ï¿½Xï¿½gï¿½[ï¿½ï¿½ / ï¿½Xï¿½Vï¿½iï¿½ï¿½ï¿½ï¿½ï¿½[ï¿½gï¿½j
+echo  3. ï¿½_ï¿½bï¿½Vï¿½ï¿½ï¿½{ï¿½[ï¿½h ï¿½ï¿½ï¿½Cï¿½Aï¿½Eï¿½gï¿½eï¿½Xï¿½g
+echo  4. tmux ï¿½İ’ï¿½ï¿½\ï¿½ï¿½
 echo.
-echo  0. ƒƒCƒ“ƒƒjƒ…[‚Ö–ß‚é
+echo  0. ï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½ï¿½ï¿½jï¿½ï¿½ï¿½[ï¿½Ö–ß‚ï¿½
 echo.
 echo ===============================================
 set "tmux_choice="
-set /p "tmux_choice=”Ô†‚ğ“ü—Í‚µ‚Ä‚­‚¾‚³‚¢: "
+set /p "tmux_choice=ï¿½Ôï¿½ï¿½ï¿½ï¿½ï¿½Í‚ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½: "
 
 if "%tmux_choice%"=="1" (
     call :tmux_check
@@ -354,7 +354,7 @@ if "%tmux_choice%"=="0" (
     goto :eof
 )
 echo.
-echo –³Œø‚È”Ô†‚Å‚·B‚à‚¤ˆê“x“ü—Í‚µ‚Ä‚­‚¾‚³‚¢B
+echo ï¿½ï¿½ï¿½ï¿½ï¿½È”Ôï¿½ï¿½Å‚ï¿½ï¿½Bï¿½ï¿½ï¿½ï¿½ï¿½ï¿½xï¿½ï¿½ï¿½Í‚ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½B
 pause
 goto :tmux_dashboard
 
@@ -363,17 +363,17 @@ goto :tmux_dashboard
 cls
 echo.
 echo ===============================================
-echo  tmux ƒCƒ“ƒXƒg[ƒ‹ó‘ÔŠm”F
+echo  tmux ï¿½Cï¿½ï¿½ï¿½Xï¿½gï¿½[ï¿½ï¿½ï¿½ï¿½ÔŠmï¿½F
 echo ===============================================
 echo.
-echo ƒŠƒ‚[ƒg Linux ƒzƒXƒg‚ğŠm”F‚µ‚Ä‚¢‚Ü‚·...
+echo ï¿½ï¿½ï¿½ï¿½ï¿½[ï¿½g Linux ï¿½zï¿½Xï¿½gï¿½ï¿½ï¿½mï¿½Fï¿½ï¿½ï¿½Ä‚ï¿½ï¿½Ü‚ï¿½...
 echo.
 
 pwsh -NoProfile -ExecutionPolicy Bypass -Command ^
   "$config = Get-Content '%~dp0config\config.json' -Raw | ConvertFrom-Json; " ^
   "$host_name = $config.linuxHost; " ^
-  "Write-Host \"ƒzƒXƒg: $host_name\" -ForegroundColor Cyan; " ^
-  "ssh $host_name 'echo \"=== tmux ƒo[ƒWƒ‡ƒ“ ===\"; tmux -V 2>/dev/null || echo \"tmux ‚ÍƒCƒ“ƒXƒg[ƒ‹‚³‚ê‚Ä‚¢‚Ü‚¹‚ñ\"; echo \"\"; echo \"=== ƒAƒNƒeƒBƒuƒZƒbƒVƒ‡ƒ“ ===\"; tmux list-sessions 2>/dev/null || echo \"ƒAƒNƒeƒBƒu‚ÈƒZƒbƒVƒ‡ƒ“‚Í‚ ‚è‚Ü‚¹‚ñ\"; echo \"\"; echo \"=== tmux ƒCƒ“ƒXƒg[ƒ‹ƒpƒX ===\"; which tmux 2>/dev/null || echo \"PATH ‚ÉŒ©‚Â‚©‚è‚Ü‚¹‚ñ\"'"
+  "Write-Host \"ï¿½zï¿½Xï¿½g: $host_name\" -ForegroundColor Cyan; " ^
+  "ssh $host_name 'echo \"=== tmux ï¿½oï¿½[ï¿½Wï¿½ï¿½ï¿½ï¿½ ===\"; tmux -V 2>/dev/null || echo \"tmux ï¿½ÍƒCï¿½ï¿½ï¿½Xï¿½gï¿½[ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½\"; echo \"\"; echo \"=== ï¿½Aï¿½Nï¿½eï¿½Bï¿½uï¿½Zï¿½bï¿½Vï¿½ï¿½ï¿½ï¿½ ===\"; tmux list-sessions 2>/dev/null || echo \"ï¿½Aï¿½Nï¿½eï¿½Bï¿½uï¿½ÈƒZï¿½bï¿½Vï¿½ï¿½ï¿½ï¿½ï¿½Í‚ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½\"; echo \"\"; echo \"=== tmux ï¿½Cï¿½ï¿½ï¿½Xï¿½gï¿½[ï¿½ï¿½ï¿½pï¿½X ===\"; which tmux 2>/dev/null || echo \"PATH ï¿½ÉŒï¿½ï¿½Â‚ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½\"'"
 
 echo.
 pause
@@ -384,25 +384,25 @@ goto :eof
 cls
 echo.
 echo ===============================================
-echo  tmux ƒCƒ“ƒXƒg[ƒ‹ / XV
+echo  tmux ï¿½Cï¿½ï¿½ï¿½Xï¿½gï¿½[ï¿½ï¿½ / ï¿½Xï¿½V
 echo ===============================================
 echo.
-echo ƒŠƒ‚[ƒg Linux ƒzƒXƒg‚É tmux ‚ğ
-echo ©“®ƒCƒ“ƒXƒg[ƒ‹ƒXƒNƒŠƒvƒg‚ÅƒCƒ“ƒXƒg[ƒ‹^XV‚µ‚Ü‚·B
+echo ï¿½ï¿½ï¿½ï¿½ï¿½[ï¿½g Linux ï¿½zï¿½Xï¿½gï¿½ï¿½ tmux ï¿½ï¿½
+echo ï¿½ï¿½ï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½Xï¿½gï¿½[ï¿½ï¿½ï¿½Xï¿½Nï¿½ï¿½ï¿½vï¿½gï¿½ÅƒCï¿½ï¿½ï¿½Xï¿½gï¿½[ï¿½ï¿½ï¿½^ï¿½Xï¿½Vï¿½ï¿½ï¿½Ü‚ï¿½ï¿½B
 echo.
-echo Às‚µ‚Ü‚·‚©H (Y=Às / N=–ß‚é)
+echo ï¿½ï¿½ï¿½sï¿½ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½ï¿½H (Y=ï¿½ï¿½ï¿½s / N=ï¿½ß‚ï¿½)
 set "tmux_confirm="
 set /p "tmux_confirm="
 
 if /i not "%tmux_confirm%"=="Y" (
     echo.
-    echo ƒLƒƒƒ“ƒZƒ‹‚µ‚Ü‚µ‚½B
+    echo ï¿½Lï¿½ï¿½ï¿½ï¿½ï¿½Zï¿½ï¿½ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½ï¿½B
     pause
     goto :eof
 )
 
 echo.
-echo ƒŠƒ‚[ƒgƒzƒXƒg‚Å tmux-install.sh ‚ğÀs‚µ‚Ä‚¢‚Ü‚·...
+echo ï¿½ï¿½ï¿½ï¿½ï¿½[ï¿½gï¿½zï¿½Xï¿½gï¿½ï¿½ tmux-install.sh ï¿½ï¿½ï¿½ï¿½ï¿½sï¿½ï¿½ï¿½Ä‚ï¿½ï¿½Ü‚ï¿½...
 echo.
 pwsh -NoProfile -ExecutionPolicy Bypass -Command ^
   "$config = Get-Content '%~dp0config\config.json' -Raw | ConvertFrom-Json; " ^
@@ -422,18 +422,18 @@ goto :eof
 cls
 echo.
 echo ===============================================
-echo  tmux ƒ_ƒbƒVƒ…ƒ{[ƒh ƒŒƒCƒAƒEƒgƒeƒXƒg
+echo  tmux ï¿½_ï¿½bï¿½Vï¿½ï¿½ï¿½{ï¿½[ï¿½h ï¿½ï¿½ï¿½Cï¿½Aï¿½Eï¿½gï¿½eï¿½Xï¿½g
 echo ===============================================
 echo.
-echo —˜—p‰Â”\‚ÈƒŒƒCƒAƒEƒg:
-echo  1. default        iƒTƒCƒhƒyƒCƒ“ 2 –‡j
-echo  2. review-team    iƒTƒCƒhƒyƒCƒ“ 4 –‡A2x2j
-echo  3. fullstack-dev  iƒTƒCƒhƒyƒCƒ“ 6 –‡A3x2j
-echo  4. debug-team     iƒTƒCƒhƒyƒCƒ“ 3 –‡j
-echo  0. –ß‚é
+echo ï¿½ï¿½ï¿½pï¿½Â”\ï¿½Èƒï¿½ï¿½Cï¿½Aï¿½Eï¿½g:
+echo  1. default        ï¿½iï¿½Tï¿½Cï¿½hï¿½yï¿½Cï¿½ï¿½ 2 ï¿½ï¿½ï¿½j
+echo  2. review-team    ï¿½iï¿½Tï¿½Cï¿½hï¿½yï¿½Cï¿½ï¿½ 4 ï¿½ï¿½ï¿½A2x2ï¿½j
+echo  3. fullstack-dev  ï¿½iï¿½Tï¿½Cï¿½hï¿½yï¿½Cï¿½ï¿½ 6 ï¿½ï¿½ï¿½A3x2ï¿½j
+echo  4. debug-team     ï¿½iï¿½Tï¿½Cï¿½hï¿½yï¿½Cï¿½ï¿½ 3 ï¿½ï¿½ï¿½j
+echo  0. ï¿½ß‚ï¿½
 echo.
 set "layout_choice="
-set /p "layout_choice=ƒŒƒCƒAƒEƒg‚ğ‘I‘ğ‚µ‚Ä‚­‚¾‚³‚¢ (0-4): "
+set /p "layout_choice=ï¿½ï¿½ï¿½Cï¿½Aï¿½Eï¿½gï¿½ï¿½Iï¿½ï¿½ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (0-4): "
 
 if "!layout_choice!"=="0" goto :eof
 if "!layout_choice!"=="" goto :eof
@@ -445,13 +445,13 @@ if "%layout_choice%"=="3" set "layout_name=fullstack-dev-team"
 if "%layout_choice%"=="4" set "layout_name=debug-team"
 
 echo.
-echo ƒŒƒCƒAƒEƒg "%layout_name%" ‚ğŠm”F‚µ‚Ä‚¢‚Ü‚·...
+echo ï¿½ï¿½ï¿½Cï¿½Aï¿½Eï¿½g "%layout_name%" ï¿½ï¿½ï¿½mï¿½Fï¿½ï¿½ï¿½Ä‚ï¿½ï¿½Ü‚ï¿½...
 echo.
 
 pwsh -NoProfile -ExecutionPolicy Bypass -Command ^
   "$config = Get-Content '%~dp0config\config.json' -Raw | ConvertFrom-Json; " ^
   "$host_name = $config.linuxHost; " ^
-  "Write-Host 'ƒŒƒCƒAƒEƒgƒtƒ@ƒCƒ‹‚Ì“à—e:' -ForegroundColor Cyan; " ^
+  "Write-Host 'ï¿½ï¿½ï¿½Cï¿½Aï¿½Eï¿½gï¿½tï¿½@ï¿½Cï¿½ï¿½ï¿½Ì“ï¿½ï¿½e:' -ForegroundColor Cyan; " ^
   "Get-Content '%~dp0scripts\tmux\layouts\%layout_name%.conf' | Write-Host"
 
 echo.
@@ -463,29 +463,29 @@ goto :eof
 cls
 echo.
 echo ===============================================
-echo  tmux İ’è•\¦
+echo  tmux ï¿½İ’ï¿½\ï¿½ï¿½
 echo ===============================================
 echo.
 
 pwsh -NoProfile -ExecutionPolicy Bypass -Command ^
   "$config = Get-Content '%~dp0config\config.json' -Raw | ConvertFrom-Json; " ^
   "if ($config.tmux) { " ^
-  "  Write-Host 'tmux İ’è:' -ForegroundColor Cyan; " ^
-  "  Write-Host \"  —LŒø:           $($config.tmux.enabled)\"; " ^
-  "  Write-Host \"  ©“®ƒCƒ“ƒXƒg[ƒ‹: $($config.tmux.autoInstall)\"; " ^
-  "  Write-Host \"  ƒŒƒCƒAƒEƒg:     $($config.tmux.defaultLayout)\"; " ^
+  "  Write-Host 'tmux ï¿½İ’ï¿½:' -ForegroundColor Cyan; " ^
+  "  Write-Host \"  ï¿½Lï¿½ï¿½:           $($config.tmux.enabled)\"; " ^
+  "  Write-Host \"  ï¿½ï¿½ï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½Xï¿½gï¿½[ï¿½ï¿½: $($config.tmux.autoInstall)\"; " ^
+  "  Write-Host \"  ï¿½ï¿½ï¿½Cï¿½Aï¿½Eï¿½g:     $($config.tmux.defaultLayout)\"; " ^
   "  Write-Host ''; " ^
-  "  Write-Host 'ƒyƒCƒ“İ’è:' -ForegroundColor Cyan; " ^
+  "  Write-Host 'ï¿½yï¿½Cï¿½ï¿½ï¿½İ’ï¿½:' -ForegroundColor Cyan; " ^
   "  $config.tmux.panes.PSObject.Properties | ForEach-Object { " ^
   "    Write-Host \"  $($_.Name): enabled=$($_.Value.enabled), interval=$($_.Value.refreshInterval)s\" " ^
   "  }; " ^
   "  Write-Host ''; " ^
-  "  Write-Host 'ƒe[ƒ}:' -ForegroundColor Cyan; " ^
+  "  Write-Host 'ï¿½eï¿½[ï¿½}:' -ForegroundColor Cyan; " ^
   "  $config.tmux.theme.PSObject.Properties | ForEach-Object { " ^
   "    Write-Host \"  $($_.Name): $($_.Value)\" " ^
   "  } " ^
   "} else { " ^
-  "  Write-Host 'config.json ‚É tmux ƒZƒNƒVƒ‡ƒ“‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñ' -ForegroundColor Yellow " ^
+  "  Write-Host 'config.json ï¿½ï¿½ tmux ï¿½Zï¿½Nï¿½Vï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â‚ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½' -ForegroundColor Yellow " ^
   "}"
 
 echo.
@@ -497,39 +497,39 @@ goto :eof
 cls
 echo.
 echo ===============================================
-echo  WezTerm + tmux ‹N“®
+echo  WezTerm + tmux ï¿½Nï¿½ï¿½
 echo ===============================================
 echo.
-echo ƒŠƒ‚[ƒgƒzƒXƒg‚É WezTerm ‚Å SSH Ú‘±‚µA
-echo tmux ƒZƒbƒVƒ‡ƒ“‚É’¼ÚƒAƒ^ƒbƒ`‚µ‚Ü‚·B
+echo ï¿½ï¿½ï¿½ï¿½ï¿½[ï¿½gï¿½zï¿½Xï¿½gï¿½ï¿½ WezTerm ï¿½ï¿½ SSH ï¿½Ú‘ï¿½ï¿½ï¿½ï¿½A
+echo tmux ï¿½Zï¿½bï¿½Vï¿½ï¿½ï¿½ï¿½ï¿½É’ï¿½ï¿½ÚƒAï¿½^ï¿½bï¿½`ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½B
 echo.
-echo ƒvƒƒWƒFƒNƒg–¼‚ğ“ü—Í‚µ‚Ä‚­‚¾‚³‚¢:
+echo ï¿½vï¿½ï¿½ï¿½Wï¿½Fï¿½Nï¿½gï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í‚ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½:
 set "wt_project="
 set /p "wt_project="
 if not defined wt_project (
-    echo ƒvƒƒWƒFƒNƒg–¼‚ª“ü—Í‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB
+    echo ï¿½vï¿½ï¿½ï¿½Wï¿½Fï¿½Nï¿½gï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í‚ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½B
     pause
     goto :eof
 )
 echo.
-echo ƒ|[ƒg”Ô†iƒfƒtƒHƒ‹ƒg: 9222j:
+echo ï¿½|ï¿½[ï¿½gï¿½Ôï¿½ï¿½iï¿½fï¿½tï¿½Hï¿½ï¿½ï¿½g: 9222ï¿½j:
 set "wt_port="
 set /p "wt_port="
 if not defined wt_port set "wt_port=9222"
 
 echo.
-echo Ú‘±‚µ‚Ä‚¢‚Ü‚·...
+echo ï¿½Ú‘ï¿½ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½Ü‚ï¿½...
 pwsh -NoProfile -ExecutionPolicy Bypass -Command ^
   "$config = Get-Content '%~dp0config\config.json' -Raw | ConvertFrom-Json; " ^
   "$h = $config.linuxHost; " ^
   "$session = 'claude-!wt_project!-!wt_port!'; " ^
-  "Write-Host \"Ú‘±æ: $h  ƒZƒbƒVƒ‡ƒ“: $session\" -ForegroundColor Cyan; " ^
+  "Write-Host \"ï¿½Ú‘ï¿½ï¿½ï¿½: $h  ï¿½Zï¿½bï¿½Vï¿½ï¿½ï¿½ï¿½: $session\" -ForegroundColor Cyan; " ^
   "$wtExe = 'wezterm'; " ^
   "if (-not (Get-Command $wtExe -ErrorAction SilentlyContinue)) { " ^
   "  $wtExe = Join-Path $env:LOCALAPPDATA 'Programs\WezTerm\wezterm.exe'; " ^
   "} " ^
   "Start-Process $wtExe -ArgumentList 'ssh', $h, '--', 'bash', '-c', " ^
-  "  \"tmux attach-session -t $session 2>/dev/null || echo 'ƒZƒbƒVƒ‡ƒ“ $session ‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñBæ‚É‘I‘ğˆ 1 ‚© 2 ‚Å‹N“®‚µ‚Ä‚­‚¾‚³‚¢B'; exec bash\""
+  "  \"tmux attach-session -t $session 2>/dev/null || echo 'ï¿½Zï¿½bï¿½Vï¿½ï¿½ï¿½ï¿½ $session ï¿½ï¿½ï¿½ï¿½ï¿½Â‚ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½Bï¿½ï¿½É‘Iï¿½ï¿½ï¿½ï¿½ 1 ï¿½ï¿½ 2 ï¿½Å‹Nï¿½ï¿½ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½B'; exec bash\""
 echo.
 pause
 goto :eof
@@ -538,26 +538,26 @@ goto :eof
 :tmux_layout_select
 echo.
 echo -----------------------------------------------
-echo  tmux ƒŒƒCƒAƒEƒg‚ğ‘I‘ğ‚µ‚Ä‚­‚¾‚³‚¢
+echo  tmux ï¿½ï¿½ï¿½Cï¿½Aï¿½Eï¿½gï¿½ï¿½Iï¿½ï¿½ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 echo -----------------------------------------------
-echo    0. ‚È‚µi’Êí‹N“®Etmux ‚ğg—p‚µ‚È‚¢j
-echo    1. autoiAgent Teams \¬‚ğ©“®ŒŸoj[ƒfƒtƒHƒ‹ƒg]
-echo    2. defaulti2ƒyƒCƒ“: Claude + ƒ‚ƒjƒ^ƒŠƒ“ƒOj
-echo    3. review-teami4ƒyƒCƒ“: ƒŒƒrƒ…[ƒ`[ƒ€j
-echo    4. fullstack-dev-teami6ƒyƒCƒ“: ƒtƒ‹ƒXƒ^ƒbƒNŠJ”­ƒ`[ƒ€j
-echo    5. debug-teami3ƒyƒCƒ“: ƒfƒoƒbƒOƒ`[ƒ€j
-echo    9. –ß‚éiƒƒCƒ“ƒƒjƒ…[‚Öj
+echo    0. ï¿½È‚ï¿½ï¿½iï¿½Êï¿½Nï¿½ï¿½ï¿½Etmux ï¿½ï¿½ï¿½gï¿½pï¿½ï¿½ï¿½È‚ï¿½ï¿½j
+echo    1. autoï¿½iAgent Teams ï¿½\ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½oï¿½j[ï¿½fï¿½tï¿½Hï¿½ï¿½ï¿½g]
+echo    2. defaultï¿½i2ï¿½yï¿½Cï¿½ï¿½: Claude + ï¿½ï¿½ï¿½jï¿½^ï¿½ï¿½ï¿½ï¿½ï¿½Oï¿½j
+echo    3. review-teamï¿½i4ï¿½yï¿½Cï¿½ï¿½: ï¿½ï¿½ï¿½rï¿½ï¿½ï¿½[ï¿½`ï¿½[ï¿½ï¿½ï¿½j
+echo    4. fullstack-dev-teamï¿½i6ï¿½yï¿½Cï¿½ï¿½: ï¿½tï¿½ï¿½ï¿½Xï¿½^ï¿½bï¿½Nï¿½Jï¿½ï¿½ï¿½`ï¿½[ï¿½ï¿½ï¿½j
+echo    5. debug-teamï¿½i3ï¿½yï¿½Cï¿½ï¿½: ï¿½fï¿½oï¿½bï¿½Oï¿½`ï¿½[ï¿½ï¿½ï¿½j
+echo    9. ï¿½ß‚ï¿½iï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½ï¿½ï¿½jï¿½ï¿½ï¿½[ï¿½Öj
 echo.
 set "layout_choice="
 set "tmux_flag="
 set "tmux_back=0"
-set /p "layout_choice=‘I‘ğ [0-5, 9]iƒfƒtƒHƒ‹ƒg: 1j: "
+set /p "layout_choice=ï¿½Iï¿½ï¿½ [0-5, 9]ï¿½iï¿½fï¿½tï¿½Hï¿½ï¿½ï¿½g: 1ï¿½j: "
 if "!layout_choice!"=="9" (
     set "tmux_back=1"
     goto :eof
 )
 if "!layout_choice!"=="0" (
-    set "tmux_flag="
+    set "tmux_flag=-Layout none"
 ) else if "!layout_choice!"=="2" (
     set "tmux_flag=-TmuxMode -Layout default"
 ) else if "!layout_choice!"=="3" (

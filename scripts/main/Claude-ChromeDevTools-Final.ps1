@@ -1593,9 +1593,9 @@ echo "👋 終了しました"
 $RunClaude = $RunClaude -replace '__DEVTOOLS_PORT__', $DevToolsPort
 
 # tmux 設定値を置換
-$TmuxEnabled = if ($TmuxMode -or ($Config.tmux -and $Config.tmux.enabled)) { "true" } else { "false" }
+$TmuxEnabled = if ($Layout -eq "none") { "false" } elseif ($TmuxMode -or ($Config.tmux -and $Config.tmux.enabled)) { "true" } else { "false" }
 $TmuxAutoInstallEarly = if ($Config.tmux -and $Config.tmux.autoInstall) { "true" } else { "false" }
-$TmuxLayout = if ($Layout -ne "") { $Layout } elseif ($Config.tmux -and $Config.tmux.defaultLayout) { $Config.tmux.defaultLayout } else { "auto" }
+$TmuxLayout = if ($Layout -ne "" -and $Layout -ne "none") { $Layout } elseif ($Config.tmux -and $Config.tmux.defaultLayout) { $Config.tmux.defaultLayout } else { "auto" }
 $TmuxScriptsDir = "$LinuxBase/$ProjectName/scripts/tmux"
 
 $RunClaude = $RunClaude -replace '__TMUX_ENABLED__', $TmuxEnabled
