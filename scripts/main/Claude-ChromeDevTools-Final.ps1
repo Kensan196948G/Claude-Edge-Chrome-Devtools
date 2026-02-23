@@ -1959,7 +1959,7 @@ while true; do
     # INIT_PROMPT を tmux バッファ経由で注入（TTY を保持しながら送信）
     # 最初の起動時のみ注入する（再起動ループでの多重注入を防止）
     if [ "$_INIT_INJECTED" = "0" ]; then
-      INIT_FILE="/tmp/claude_init_${PORT:-$}.txt"
+      INIT_FILE="/tmp/claude_init_${PORT:-$$}.txt"
       printf '%s\n' "$INIT_PROMPT_TMUX" > "$INIT_FILE"
       # バックグラウンドで遅延注入（Claude 起動後 6 秒待ってから貼り付け）
       # 並列セッションとのバッファ競合を防ぐため名前付きバッファを使用
