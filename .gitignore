@@ -2,6 +2,9 @@
 # Claude-EdgeChromeDevTools .gitignore
 # ============================================================
 
+# Git Worktrees（isolated workspace directories）
+.worktrees/
+
 # 機密情報（絶対にコミットしない）
 config/config.json
 config/config.local.json
