@@ -60,12 +60,27 @@ if "%choice%"=="1" (
     set "script_name=scripts\main\Claude-EdgeDevTools.ps1"
     set "fast_return=1"
     echo.
-    echo  tmux ダッシュボードを使用しますか? Y/N [Y]
-    set /p "use_tmux="
-    if /i "!use_tmux!"=="N" (
+    echo  tmux レイアウトを選択してください:
+    echo    0. なし（通常起動・tmux を使用しない）
+    echo    1. auto（Agent Teams 構成を自動検出）[デフォルト]
+    echo    2. default（2ペイン: Claude + モニタリング）
+    echo    3. review-team（4ペイン: レビューチーム）
+    echo    4. fullstack-dev-team（6ペイン: フルスタック開発チーム）
+    echo    5. debug-team（3ペイン: デバッグチーム）
+    echo.
+    set /p "layout_choice=選択 [0-5]（デフォルト: 1）: "
+    if "!layout_choice!"=="0" (
         set "tmux_flag="
+    ) else if "!layout_choice!"=="2" (
+        set "tmux_flag=-TmuxMode -Layout default"
+    ) else if "!layout_choice!"=="3" (
+        set "tmux_flag=-TmuxMode -Layout review-team"
+    ) else if "!layout_choice!"=="4" (
+        set "tmux_flag=-TmuxMode -Layout fullstack-dev-team"
+    ) else if "!layout_choice!"=="5" (
+        set "tmux_flag=-TmuxMode -Layout debug-team"
     ) else (
-        set "tmux_flag=-TmuxMode"
+        set "tmux_flag=-TmuxMode -Layout auto"
     )
     goto execute_with_flags
 )
@@ -73,12 +88,27 @@ if "%choice%"=="2" (
     set "script_name=scripts\main\Claude-ChromeDevTools-Final.ps1"
     set "fast_return=1"
     echo.
-    echo  tmux ダッシュボードを使用しますか? Y/N [Y]
-    set /p "use_tmux="
-    if /i "!use_tmux!"=="N" (
+    echo  tmux レイアウトを選択してください:
+    echo    0. なし（通常起動・tmux を使用しない）
+    echo    1. auto（Agent Teams 構成を自動検出）[デフォルト]
+    echo    2. default（2ペイン: Claude + モニタリング）
+    echo    3. review-team（4ペイン: レビューチーム）
+    echo    4. fullstack-dev-team（6ペイン: フルスタック開発チーム）
+    echo    5. debug-team（3ペイン: デバッグチーム）
+    echo.
+    set /p "layout_choice=選択 [0-5]（デフォルト: 1）: "
+    if "!layout_choice!"=="0" (
         set "tmux_flag="
+    ) else if "!layout_choice!"=="2" (
+        set "tmux_flag=-TmuxMode -Layout default"
+    ) else if "!layout_choice!"=="3" (
+        set "tmux_flag=-TmuxMode -Layout review-team"
+    ) else if "!layout_choice!"=="4" (
+        set "tmux_flag=-TmuxMode -Layout fullstack-dev-team"
+    ) else if "!layout_choice!"=="5" (
+        set "tmux_flag=-TmuxMode -Layout debug-team"
     ) else (
-        set "tmux_flag=-TmuxMode"
+        set "tmux_flag=-TmuxMode -Layout auto"
     )
     goto execute_with_flags
 )
