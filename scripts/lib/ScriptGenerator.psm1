@@ -137,10 +137,20 @@ function New-RunClaudeScript {
     $port        = $Params['Port']
     $linuxBase   = $Params['LinuxBase']
     $projectName = $Params['ProjectName']
-    $layout      = if ($Params.ContainsKey('Layout'))      { $Params['Layout'] }      else { "auto" }
-    $tmuxEnabled = if ($Params.ContainsKey('TmuxEnabled')) { $Params['TmuxEnabled'] } else { $false }
-    $envVars     = if ($Params.ContainsKey('EnvVars'))     { $Params['EnvVars'] }     else { @{} }
-    $initPrompt  = if ($Params.ContainsKey('InitPrompt'))  { $Params['InitPrompt'] }  else { "" }
+    $layout      = if ($Params.ContainsKey('Layout'))         { $Params['Layout'] }         else { "auto" }
+    $tmuxEnabled = if ($Params.ContainsKey('TmuxEnabled'))    { $Params['TmuxEnabled'] }    else { $false }
+    $envVars     = if ($Params.ContainsKey('EnvVars'))        { $Params['EnvVars'] }        else { @{} }
+    $initPrompt  = if ($Params.ContainsKey('InitPrompt'))     { $Params['InitPrompt'] }     else { "" }
+    $initPromptFile = if ($Params.ContainsKey('InitPromptFile')) { $Params['InitPromptFile'] } else { "" }
+
+    # InitPromptFile が指定されていればファイルから読み込む（InitPrompt より優先度低）
+    if ([string]::IsNullOrWhiteSpace($initPrompt) -and -not [string]::IsNullOrWhiteSpace($initPromptFile)) {
+        if (Test-Path $initPromptFile) {
+            $initPrompt = Get-Content -Path $initPromptFile -Raw -Encoding UTF8
+        } else {
+            Write-Warning "InitPromptFile が見つかりません: $initPromptFile (デフォルトプロンプトを使用)"
+        }
+    }
 
     # PowerShellパーサーを回避するためheredoc記号を変数経由で生成
     $hd = '<' + '<'
@@ -211,7 +221,7 @@ echo "🔌 DevToolsポート: \$DEVTOOLS_PORT"
 # --- DevTools接続確認 ---
 echo "🌐 DevTools接続確認中..."
 DEVTOOLS_READY=false
-for i in \$(seq 1 10); do
+for i in `$(seq 1 10); do
     if curl -sf "http://127.0.0.1:\$DEVTOOLS_PORT/json/version" > /dev/null 2>&1; then
         DEVTOOLS_READY=true
         echo "✅ DevTools接続OK (試行: \$i)"

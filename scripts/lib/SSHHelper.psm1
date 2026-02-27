@@ -26,7 +26,7 @@ function Escape-SSHArgument {
     )
 
     # シングルクォートを '\'' でエスケープしてからシングルクォートで囲む
-    $escaped = $Value -replace "'", "'\\'''"
+    $escaped = $Value -replace "'", "'\''"
     return "'$escaped'"
 }
 
