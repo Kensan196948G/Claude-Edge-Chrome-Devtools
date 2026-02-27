@@ -10,6 +10,8 @@ WindowsマシンとリモートLinuxホスト間でClaude Codeとブラウザ開
 - 🎨 **Statusline表示**: カレントディレクトリ、Gitブランチ、モデル名、コンテキスト使用率を可視化
 - ⚙️ **中央管理設定**: config.jsonでClaude Code環境変数・UI設定を一元管理
 - 🤝 **Agent Teams対応**: 複数Claude Codeインスタンスによる並列作業オーケストレーション
+- 🏗️ **モジュール化アーキテクチャ** (v1.3.0): 7つの独立モジュールによる保守性向上
+- 🤖 **CLI引数対応** (v1.3.0): `-NonInteractive` モードによるCI/CD統合
 
 ## クイックスタート
 
@@ -67,7 +69,26 @@ start.bat
 - `[3]` Edge接続テスト
 - `[4]` Chrome接続テスト
 
-#### 方法2: PowerShellスクリプト直接実行
+#### 方法2: 統合スクリプト Claude-DevTools.ps1 (v1.3.0 新規)
+
+```powershell
+# 対話モード (デフォルト)
+.\scripts\main\Claude-DevTools.ps1
+
+# Chrome + 特定プロジェクト指定
+.\scripts\main\Claude-DevTools.ps1 -Browser chrome -Project "my-app"
+
+# 完全非対話モード (CI/CD対応)
+.\scripts\main\Claude-DevTools.ps1 -Browser edge -Project "backend" -NonInteractive
+
+# 実行内容プレビュー (変更なし)
+.\scripts\main\Claude-DevTools.ps1 -DryRun
+
+# tmux なし
+.\scripts\main\Claude-DevTools.ps1 -Layout none
+```
+
+#### 方法3: 既存スクリプト直接実行 (後方互換)
 
 ```powershell
 # Edge版
