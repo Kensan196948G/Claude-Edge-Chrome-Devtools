@@ -146,6 +146,9 @@ tmux set-option -t "$SESSION_NAME" pane-border-format "#{?pane_active,#[bg=colou
 # ・スクロールホイールでペイン内スクロール
 tmux set-option -t "$SESSION_NAME" mouse on 2>/dev/null || true
 
+# 新規ペイン作成時の自動選択を無効化（メインペインを常にフォーカス状態にする）
+tmux set-option -g even-panes off 2>/dev/null || true
+
 # ============================================================
 # ペイン分割 & モニタリングスクリプト起動
 # ============================================================
@@ -184,6 +187,10 @@ done
 tmux select-pane -t "${SESSION_NAME}.0" -T "🤖 Claude Code [${PROJECT_NAME}]" 2>/dev/null || true
 tmux select-pane -t "${SESSION_NAME}.0"
 tmux send-keys -t "${SESSION_NAME}.0" "${CLAUDE_CMD}" C-m
+
+# 起動完了を待ってメインペインを確実にフォーカス（Claudeのプロンプトを常に表示）
+sleep 0.3
+tmux select-pane -t "${SESSION_NAME}.0"
 
 # ============================================================
 # セッションにアタッチ

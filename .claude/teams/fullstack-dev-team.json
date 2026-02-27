@@ -8,6 +8,8 @@
       "name": "backend-dev",
       "role": "バックエンド開発担当",
       "agentType": "general-purpose",
+      "icon": "⚙️",
+      "color": "green",
       "workTree": "feature/backend",
       "responsibilities": [
         "PowerShell モジュール開発（scripts/lib/）",
@@ -22,6 +24,8 @@
       "name": "frontend-dev",
       "role": "フロントエンド開発担当",
       "agentType": "general-purpose",
+      "icon": "🎨",
+      "color": "magenta",
       "workTree": "feature/frontend",
       "responsibilities": [
         "start.bat メニュー拡張・UI 改善",
@@ -36,6 +40,8 @@
       "name": "test-dev",
       "role": "テスト開発担当",
       "agentType": "general-purpose",
+      "icon": "🧪",
+      "color": "blue",
       "workTree": "feature/tests",
       "responsibilities": [
         "統合テストスクリプト作成（scripts/test/Integration.Tests.ps1）",
@@ -50,6 +56,8 @@
       "name": "infra-dev",
       "role": "インフラ構築担当",
       "agentType": "general-purpose",
+      "icon": "🏗️",
+      "color": "white",
       "workTree": "feature/infra",
       "responsibilities": [
         "Docker 環境セットアップ（Dockerfile, docker-compose.yml）",

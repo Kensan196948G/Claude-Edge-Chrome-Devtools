@@ -8,6 +8,8 @@
       "name": "security-reviewer",
       "role": "セキュリティレビュー担当",
       "agentType": "Explore",
+      "icon": "🔒",
+      "color": "red",
       "focus": [
         "コマンドインジェクション脆弱性の検出",
         "機密情報（Token・API Key）の平文検出",
@@ -21,6 +23,8 @@
       "name": "performance-reviewer",
       "role": "パフォーマンスレビュー担当",
       "agentType": "Explore",
+      "icon": "⚡",
+      "color": "yellow",
       "focus": [
         "SSH 接続回数の最適化",
         "HTTP リクエストの冗長性削減",
@@ -34,6 +38,8 @@
       "name": "test-reviewer",
       "role": "テストカバレッジレビュー担当",
       "agentType": "Explore",
+      "icon": "🧪",
+      "color": "cyan",
       "focus": [
         "エッジケースのテスト網羅性",
         "異常系テストの不足箇所特定",

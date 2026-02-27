@@ -9,6 +9,20 @@ REFRESH="${TMUX_PANE_REFRESH_AGENT:-5}"
 TEAMS_DIR="$HOME/.claude/teams"
 TASKS_DIR="$HOME/.claude/tasks"
 
+get_color_code() {
+    local color="$1"
+    case "$color" in
+        red) echo "31" ;;
+        green) echo "32" ;;
+        yellow) echo "33" ;;
+        blue) echo "34" ;;
+        magenta) echo "35" ;;
+        cyan) echo "36" ;;
+        white) echo "37" ;;
+        *) echo "37" ;;
+    esac
+}
+
 while true; do
     clear
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -44,14 +58,18 @@ while true; do
 
         # メンバー情報取得
         if command -v jq &>/dev/null; then
-            MEMBERS=$(jq -r '.members[]? | "    \(.name) [\(.agentType // "agent")]"' "$CONFIG_FILE" 2>/dev/null || echo "")
-            if [ -n "$MEMBERS" ]; then
-                echo "$MEMBERS"
-            else
+            while IFS= read -r line; do
+                [ -z "$line" ] && continue
+                icon=$(echo "$line" | jq -r '.icon // "•"')
+                name=$(echo "$line" | jq -r '.name')
+                color=$(echo "$line" | jq -r '.color // "white"')
+                color_code=$(get_color_code "$color")
+                echo -e "    \033[${color_code}m${icon} ${name}\033[0m"
+            done < <(jq -c '.members[]?' "$CONFIG_FILE" 2>/dev/null)
+            _MEMBER_COUNT=$(jq '.members | length' "$CONFIG_FILE" 2>/dev/null || echo "0")
+            if [ "$_MEMBER_COUNT" = "0" ] || [ "$_MEMBER_COUNT" = "null" ]; then
                 echo "    (no members)"
             fi
-
-            _MEMBER_COUNT=$(jq '.members | length' "$CONFIG_FILE" 2>/dev/null || echo "0")
         else
             _MEMBER_COUNT="?"
             echo "    (jq required for details)"

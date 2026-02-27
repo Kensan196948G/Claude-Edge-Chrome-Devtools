@@ -8,6 +8,8 @@
       "name": "hypothesis-1-ssh",
       "role": "仮説1検証: SSH接続問題",
       "agentType": "Explore",
+      "icon": "🔌",
+      "color": "yellow",
       "investigation": [
         "SSH 鍵権限の確認（Windows ACL, Linux chmod 600）",
         "~/.ssh/config の設定確認（ControlMaster, BatchMode）",
@@ -21,6 +23,8 @@
       "name": "hypothesis-2-devtools",
       "role": "仮説2検証: DevToolsポート競合・応答問題",
       "agentType": "Explore",
+      "icon": "🌐",
+      "color": "cyan",
       "investigation": [
         "ポート使用状況の確認（Get-NetTCPConnection）",
         "ブラウザプロセスの競合検出",
@@ -34,6 +38,8 @@
       "name": "hypothesis-3-browser",
       "role": "仮説3検証: ブラウザプロセス異常・クラッシュ",
       "agentType": "Explore",
+      "icon": "🌏",
+      "color": "red",
       "investigation": [
         "ブラウザ起動オプションの妥当性確認",
         "プロファイルディレクトリの権限・破損確認",

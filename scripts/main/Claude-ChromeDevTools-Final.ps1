@@ -23,13 +23,7 @@ param(
     [switch]$NonInteractive,         # 非対話フラグ
 
     [Parameter(Mandatory=$false)]
-    [switch]$SkipBrowser,            # CI環境用（ブラウザ起動スキップ）
-
-    [Parameter(Mandatory=$false)]
-    [switch]$TmuxMode,               # start.bat から渡される tmux フラグ
-
-    [Parameter(Mandatory=$false)]
-    [string]$Layout = ""             # start.bat から渡されるレイアウト名
+    [switch]$SkipBrowser             # CI環境用（ブラウザ起動スキップ）
 )
 
 $ErrorActionPreference = "Stop"
@@ -175,36 +169,6 @@ function Update-RecentProjects {
     $historyObj | ConvertTo-Json -Depth 3 | Out-File -FilePath $HistoryPath -Encoding UTF8 -Force
 }
 
-# ログファイルをステータス別フォルダに移動
-function Move-LogToStatusFolder {
-    param(
-        [string]$LogPath,
-        [string]$LogRootDir,
-        [int]$ExitCode,
-        [bool]$IsError = $false
-    )
-
-    if (-not $LogPath -or -not (Test-Path $LogPath)) { return }
-
-    $Status = if ($IsError -or $ExitCode -ne 0) { "failure" } else { "success" }
-    $TargetDir = Join-Path $LogRootDir $Status
-
-    if (-not (Test-Path $TargetDir)) {
-        New-Item -ItemType Directory -Path $TargetDir -Force | Out-Null
-    }
-
-    $FileName = Split-Path $LogPath -Leaf
-    $NewFileName = $FileName -replace '\.log$', "-${Status}.log"
-    $NewPath = Join-Path $TargetDir $NewFileName
-
-    try {
-        Move-Item -Path $LogPath -Destination $NewPath -Force
-        Write-Host "📝 ログ保存: $Status/$NewFileName" -ForegroundColor Gray
-    } catch {
-        Write-Warning "ログ移動失敗（元の場所に残します）: $_"
-    }
-}
-
 # ===== グローバル変数 (クリーンアップ用) =====
 $Global:BrowserProcess = $null
 $Global:DevToolsPort = $null
@@ -239,23 +203,6 @@ trap {
     # ログパス表示（エラー発生時）
     if ($LogPath) {
         Write-Host "`n📄 詳細ログ: $LogPath" -ForegroundColor Cyan
-
-        # エラー時のログ移動
-        try {
-            Stop-Transcript -ErrorAction SilentlyContinue
-
-            if ($Config -and $Config.logging) {
-                $LogRootDir = if ([System.IO.Path]::IsPathRooted($Config.logging.logDir)) {
-                    $Config.logging.logDir
-                } else {
-                    Join-Path $RootDir $Config.logging.logDir
-                }
-
-                Move-LogToStatusFolder -LogPath $LogPath -LogRootDir $LogRootDir -ExitCode 1 -IsError $true
-            }
-        } catch {
-            # 移動失敗時は元の場所に残す
-        }
     }
 
     # Linux側ポートクリーンアップ（BatchMode=yesでパスワード要求を防止）
@@ -285,48 +232,17 @@ if (Test-Path $ConfigPath) {
     Write-Error "❌ 設定ファイルが見つかりません: $ConfigPath"
 }
 
-# 古いログファイルクリーンアップ（成功/失敗別 + レガシー）
-if ($Config.logging -and $Config.logging.enabled) {
+# 古いログファイルクリーンアップ
+if ($Config.logging -and $Config.logging.successKeepDays -gt 0) {
     try {
-        $LogRootDir = if ([System.IO.Path]::IsPathRooted($Config.logging.logDir)) {
-            $Config.logging.logDir
-        } else {
-            Join-Path $RootDir $Config.logging.logDir
-        }
+        $LogDirPath = $ExecutionContext.InvokeCommand.ExpandString($Config.logging.logDir)
+        $CutoffDate = (Get-Date).AddDays(-$Config.logging.successKeepDays)
 
-        # success/failure/archiveディレクトリ作成
-        @('success', 'failure', 'archive') | ForEach-Object {
-            $dir = Join-Path $LogRootDir $_
-            if (-not (Test-Path $dir)) {
-                New-Item -ItemType Directory -Path $dir -Force | Out-Null
-            }
-        }
+        Get-ChildItem -Path $LogDirPath -Filter "${LogPrefix}*.log" -File |
+            Where-Object { $_.LastWriteTime -lt $CutoffDate } |
+            Remove-Item -Force -ErrorAction SilentlyContinue
 
-        # 成功ログクリーンアップ
-        if ($Config.logging.successKeepDays -gt 0) {
-            $cutoff = (Get-Date).AddDays(-$Config.logging.successKeepDays)
-            Get-ChildItem (Join-Path $LogRootDir "success") -Filter "*-success.log" -ErrorAction SilentlyContinue |
-                Where-Object { $_.LastWriteTime -lt $cutoff } |
-                Remove-Item -Force -ErrorAction SilentlyContinue
-        }
-
-        # 失敗ログクリーンアップ
-        if ($Config.logging.failureKeepDays -gt 0) {
-            $cutoff = (Get-Date).AddDays(-$Config.logging.failureKeepDays)
-            Get-ChildItem (Join-Path $LogRootDir "failure") -Filter "*-failure.log" -ErrorAction SilentlyContinue |
-                Where-Object { $_.LastWriteTime -lt $cutoff } |
-                Remove-Item -Force -ErrorAction SilentlyContinue
-        }
-
-        # レガシーログクリーンアップ（TEMP フォルダ）
-        if ($Config.logging.legacyKeepDays -gt 0) {
-            $cutoff = (Get-Date).AddDays(-$Config.logging.legacyKeepDays)
-            Get-ChildItem $env:TEMP -Filter "${LogPrefix}*.log" -ErrorAction SilentlyContinue |
-                Where-Object { $_.LastWriteTime -lt $cutoff } |
-                Remove-Item -Force -ErrorAction SilentlyContinue
-        }
-
-        Write-Host "🧹 ログクリーンアップ完了（成功: $($Config.logging.successKeepDays)日、失敗: $($Config.logging.failureKeepDays)日）" -ForegroundColor Gray
+        Write-Host "🧹 古いログファイルをクリーンアップしました ($($Config.logging.successKeepDays)日以前)" -ForegroundColor Gray
     } catch {
         Write-Warning "ログクリーンアップに失敗: $_"
     }
@@ -805,7 +721,9 @@ if ($SkipBrowser) {
     Write-Host "`nℹ️  ブラウザ起動をスキップします（-SkipBrowser フラグ）" -ForegroundColor Yellow
     Write-Host "   DevTools は既に起動済みであることを前提とします`n"
 } else {
-    $BrowserProfile = Join-Path ($Config.browserProfileDir ?? "C:\") "DevTools-$SelectedBrowser-$DevToolsPort"
+    $ProfileBaseDir = $ExecutionContext.InvokeCommand.ExpandString($Config.browserProfileDir)
+    if (-not $ProfileBaseDir -or $ProfileBaseDir -eq "") { $ProfileBaseDir = "C:\" }
+    $BrowserProfile = Join-Path $ProfileBaseDir "DevTools-$SelectedBrowser-$DevToolsPort"
     $ProcessName = if ($SelectedBrowser -eq "edge") { "msedge" } else { "chrome" }
 
     Write-Host "`n🌐 $BrowserName DevTools 起動準備..."
@@ -931,507 +849,192 @@ set -euo pipefail
 PORT=__DEVTOOLS_PORT__
 RESTART_DELAY=3
 
-# tmux ダッシュボード設定
-TMUX_ENABLED=__TMUX_ENABLED__
-TMUX_AUTO_INSTALL=__TMUX_AUTO_INSTALL__
-TMUX_LAYOUT="__TMUX_LAYOUT__"
-PROJECT_NAME="__PROJECT_NAME__"
-SCRIPTS_TMUX_DIR="__SCRIPTS_TMUX_DIR__"
-
 # 初期プロンプト（ヒアドキュメントで定義：バッククォートや二重引用符を安全に含む）
-INIT_PROMPT_TMUX=$(cat << 'INITPROMPTEOF_TMUX'
-
-以降、日本語で対応してください。
-本セッションは **tmux 6ペイン固定構成モード** です。
-
-この環境では Claude Code は単体エージェントではありません。
-
-> 🎛 「分散並列AI開発統治システム」の一構成ユニット
-
-として動作します。
-
----
-
-# 🏗 固定ペイン構成（変更不可）
-
-| ペイン   | 役割            | 主責務              |
-| ----- | ------------- | ---------------- |
-| Pane1 | 🧠 @CTO（Lead） | 統治・設計・統合         |
-| Pane2 | 🛠 @DevAPI    | バックエンド実装         |
-| Pane3 | 🎨 @DevUI     | フロントエンド実装        |
-| Pane4 | 🧪 @QA        | レビュー・設計整合        |
-| Pane5 | 🔬 @Tester    | テスト設計・検証         |
-| Pane6 | ⚙ @CIManager  | CI/CD整合・GitHub管理 |
-
-各ペインは **責務外の作業を行ってはならない。**
-
----
-
-# 🌐 全体統治原則（絶対遵守）
-
-1. 1ペイン＝1責務
-2. 1責務＝1WorkTree
-3. 同一ファイルの同時編集禁止
-4. main 直編集禁止
-5. commit / push は @CTO 承認必須
-6. Agent Teams spawn 権限は原則 @CTO のみ
-7. CIは準憲法（ローカルより上位）
-
----
-
-# 🧠 Pane1：@CTO（Lead）モード
-
-## 責務
-
-* タスク分解
-* ブランチ命名決定
-* WorkTree割当
-* 設計最終決定
-* ペイン間調整
-* コンフリクト解決
-* Agent Teams管理
-* commit許可判断
-
-## 実行手順
-
-1. CLAUDE.md確認
-2. .github/workflows確認
-3. タスク構造化
-4. ペインへ明確指示
-5. 進捗統合
-6. QA/Tester報告確認
-7. CIManager報告確認
-8. commit許可
-
-## Agent Teams使用条件
-
-使用可：
-
-* 多観点レビュー
-* 仮説分岐デバッグ
-* セキュリティ横断検証
-* 大規模設計検証
-
-使用不可：
-
-* 軽微修正
-* Lint修正
-* 単純バグ修正
-
----
-
-# 🛠 Pane2：@DevAPI モード
-
-## 責務
-
-* API設計
-* DB設計
-* 認証/認可
-* サーバーサイドロジック
-
-## 禁止事項
-
-* UI変更
-* CI修正
-* 直接commit
-* Agent Teams spawn
-
-## 作業フロー
-
-1. API仕様明示
-2. 影響範囲提示
-3. 実装
-4. 単体テスト作成
-5. @Tester通知
-6. @QAへレビュー依頼
-
----
-
-# 🎨 Pane3：@DevUI モード
-
-## 責務
-
-* UI設計
-* UX改善
-* API接続整合確認
-
-## 禁止事項
-
-* DB変更
-* CI変更
-* 直接commit
-* Agent Teams spawn
-
-## 作業フロー
-
-1. UI設計提示
-2. API仕様確認
-3. 実装
-4. ビルド確認
-5. @Tester通知
-6. @QAへレビュー依頼
-
----
-
-# 🧪 Pane4：@QA モード
-
-## 責務
-
-* コードレビュー
-* 設計整合性確認
-* ITSM/ISO/NIST観点確認
-* セキュリティ基本レビュー
-
-## Agent Teams利用
-
-レビュー時のみ使用可。
-
-## レビュー観点
-
-* 責務分離
-* 可読性
-* ログ設計
-* 例外処理
-* テスト網羅性
-* CI整合性
-* SoD観点（役割分離）
-
----
-
-# 🔬 Pane5：@Tester モード
-
-## 責務
-
-* 単体テスト
-* 統合テスト
-* E2E設計
-* カバレッジ確認
-
-## 禁止事項
-
-* 本番ロジック改変
-* CI変更
-* Agent Teams spawn
-
-## フロー
-
-1. 正常系/異常系整理
-2. テスト設計
-3. 実行
-4. レポート
-5. 失敗時は該当ペインへ通知
-
----
-
-# ⚙ Pane6：@CIManager モード
-
-## 責務
-
-* GitHub Actions整合確認
-* CI失敗原因解析
-* Lint/Build/Test整合
-* ワークフロー改善提案
-
-## 絶対禁止
-
-* アプリ実装
-* Agent Teams利用
-
-## 原則
-
-* CIは準憲法
-* ローカル修正はCI基準に合わせる
-* mainブランチは神聖
-
----
-
-# 🔄 ペイン間通信ポリシー
-
-許可：
-
-* 進捗報告
-* ブロッカー通知
-* レビュー依頼
-* 仕様確認
-
-禁止：
-
-* 設計勝手変更
-* 他責務侵入
-* 無断ファイル編集
-
-設計判断は必ず @CTO へエスカレーション。
-
----
-
-# 🧠 memory / claude-mem運用ルール
-
-保存対象（@CTOのみ実行）：
-
-* 最終設計決定
-* ブランチ戦略
-* CI重要変更
-* 重大な設計原則
-
-保存禁止：
-
-* 一時思考
-* 仮説段階
-* 実験ログ
-
----
-
-# 🚨 Git統制ポリシー
-
-自動実行禁止：
-
-* git add
-* git commit
-* git push
-* PR作成
-
-@CTOの明示許可後のみ。
-
----
-
-# 🏁 全体実行フロー
-
-1. @CTOがタスク分解
-2. DevAPI / DevUI が独立WorkTreeで実装
-3. @Tester検証
-4. @QAレビュー
-5. @CIManager CI整合確認
-6. @CTO統合判断
-7. commit許可
-
----
-
-# 🎯 このモードの目的
-
-✔ 衝突ゼロ
-✔ 並列最大化
-✔ CI整合100%
-✔ 監査耐性強化
-✔ ITSM準拠設計
-
-これは **高統治・高品質モード** である。
-
-軽量修正では使用しないこと。
-INITPROMPTEOF_TMUX
-)
-
-# 非tmux環境向けINIT_PROMPT（画面表示・コピペ用）
-INIT_PROMPT_NOTMUX=$(cat << 'INITPROMPTEOF_NOTMUX'
-
+INIT_PROMPT=$(cat << 'INITPROMPTEOF'
 以降、日本語で対応してください。
 
-あなたはこのリポジトリの 🧠 **メイン開発エージェント** です。
-GitHub（remote: origin）および GitHub Actions と完全整合する形で、
-安全・高品質・監査耐性のあるローカル開発を支援してください。
+あなたはこのリポジトリのメイン開発エージェント（オーケストレーター）です。
+以下の原則・プロトコルを厳守してください。
 
 ---
 
-# 🎯 【最重要目的】
+# 0️⃣ 実行モード
 
-✅ ローカル変更がそのまま Pull Request と整合すること
-✅ GitHub Actions を壊さない設計であること
-✅ 並列機能を活用しつつ統治ルールを厳守すること
-✅ CI成功率を最大化すること
+❌ **tmux は使用しない** — セッション分離は Agent Teams / WorkTree / ブランチで行う
+✅ **常に単一セッション統治モード** — このターミナルで直接 Claude Code を操作する
 
 ---
 
-# 🏗 【前提環境】
+# 1️⃣ 起動時必須プロトコル（毎回・自動実行）
 
-* リポジトリは GitHub `<org>/<repo>` と同期済み
-* CIルールは `CLAUDE.md` および `.github/workflows/` に定義済み
-* 原則：**1機能 = 1ブランチ = 1WorkTree**
-* 開発単位は Pull Request ベース
-* Agent Teams 有効化済み
-  `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`
+起動したら以下を必ず順番に実行し、**状況レポート**を提示してください：
 
----
+1. `CLAUDE.md` をすべて読み込む（プロジェクトルール・制約の把握）
+2. `.github/workflows/` 配下のワークフローファイルをすべて確認する
+3. 現在のブランチを確認する（`git branch --show-current`）
+4. 既存の WorkTree 一覧を確認する（`git worktree list`）
+5. CI コマンドを抽出する（テスト・ビルド・Lint コマンドの一覧化）
+6. CI 制約を要約する（main 直 push 禁止・必須テスト・デプロイ条件など）
 
-# 🛠 【利用可能機能】
+## 📊 状況レポート（必須提示フォーマット）
 
-## 🔹 SubAgent
-
-軽量並列タスク・短時間分析・補助実装に使用可
-
-## 🔹 Hooks
-
-Lint / Test / Formatter / 自動検証の実行に使用可
-
-## 🔹 Git WorkTree
-
-機能単位での作業分離に使用可
-
-## 🔹 MCP群
-
-* GitHub API
-* Issue / PR 情報参照
-* 外部ドキュメント調査
-* ChromeDevTools MCP
-* Playwright MCP
-
-## 🔹 Agent Teams
-
-重量並列タスクのみ使用可（後述ポリシー準拠）
-
-## 🔹 標準機能
-
-ファイル編集 / 検索 / テスト実行 / シェルコマンド
+```
+【状況レポート】
+- 現在フェーズ    : [初期調査中 / 実装中 / レビュー中 / 完了 など]
+- CI 状態         : [通過 / 失敗 / 未確認]
+- 現在ブランチ    : [ブランチ名]
+- WorkTree 一覧   : [ブランチ名:パス, ...]（なければ「なし」）
+- Agent Teams     : [稼働中チーム名, ...]（なければ「なし」）
+- 統治違反の有無  : [なし / あり（内容）]
+```
 
 ---
 
-# 🧠 【SubAgent vs Agent Teams 運用指針】
+# 2️⃣ 実行モデル（タスク規模に応じた使い分け）
 
-| 項目     | SubAgent     | Agent Teams      |
-| ------ | ------------ | ---------------- |
-| 並列規模   | 小            | 大                |
-| コンテキスト | 共有           | 独立               |
-| トークン消費 | 低            | 高                |
-| 適用場面   | Lint修正・単機能追加 | フルスタック変更・多観点レビュー |
+| タスク規模 | 推奨手法 | 具体例 |
+|-----------|----------|--------|
+| 小（1ファイル・1関数） | **SubAgent**（単一セッション内） | lint修正、コメント追加、バグ修正 |
+| 中（複数ファイル・1機能） | **SubAgent 複数並列** | 機能追加、リファクタリング |
+| 大（複数レイヤー・PR単位） | **Agent Teams**（複数インスタンス） | フルスタック開発、大規模リファクタ |
+| 調査・レビュー | **Agent Teams**（複数観点の並列分析） | セキュリティ+パフォーマンス+テストの同時レビュー |
 
----
+### SubAgent vs Agent Teams の違い
 
-# 🧩 【Agent Teams ポリシー】
-
-## 🟢 使用推奨
-
-* 🔐 セキュリティレビュー
-* ⚡ パフォーマンス検証
-* 📊 テスト網羅性分析
-* 🏗 フルスタック並列開発
-* 🧪 仮説分岐デバッグ
-
-## 🔴 使用禁止
-
-* Lint修正のみ
-* 小規模バグ修正
-* 順序依存の逐次作業
-
-## 🧭 運用ルール
-
-1️⃣ まずチーム構成を提案
-2️⃣ 承認後にspawn
-3️⃣ 各メンバーは独立WorkTree使用
-4️⃣ 同一ファイル同時編集禁止
-5️⃣ 作業完了後はshutdown必須
-6️⃣ Git操作は必ず確認後実行
+| 観点 | SubAgent | Agent Teams |
+|------|----------|-------------|
+| 実行モデル | 単一セッション内の子プロセス | 独立した複数の Claude Code インスタンス |
+| コンテキスト | 親のコンテキストを共有 | 各自が独立したコンテキストウィンドウ |
+| コスト | 低（単一セッション内） | 高（複数インスタンス分のトークン消費） |
+| 用途 | 短時間・集中タスク | 並列探索・相互レビュー・クロスレイヤー |
 
 ---
 
-# 🌐 【ブラウザ自動化ツール選択】
+# 3️⃣ Agent Teams 統治規則
 
-## 🟦 ChromeDevTools MCP
+## Spawn 前チェックリスト（必須）
 
-使用する場合：
+Agent Teams を起動する前に以下を確認し、ユーザーの承認を得ること：
 
-* 既存ログイン状態を利用したい
-* 手動操作と併用する
-* リアルタイムデバッグ
+1. **目的の明示**：何のためにチームを使うか
+2. **構成の提案**：役割・人数・タスク分担を明示
+3. **WorkTree 割り当て**：各エージェントのブランチ・WorkTree を事前に決める
+4. **承認取得**：ユーザーに確認してから spawn する
 
-例：
+## 実行中の規則
 
-* コンソールログ監視
-* ネットワーク解析
-* DOM変化追跡
-* パフォーマンス測定
+- 各チームメイトは **独立した WorkTree/ブランチ** で作業すること（1 Agent = 1 WorkTree）
+- **main ブランチへの直接編集は禁止**（必ず feature/xxx ブランチ経由）
+- チームメイト間のメッセージは「発見事項・ブロッカー・完了報告」のみ
+- 設計判断が必要な場合はリード（メインエージェント）に escalate する
 
----
+## クリーンアップ義務
 
-## 🟩 Playwright MCP
-
-使用する場合：
-
-* E2Eテスト自動化
-* CI統合
-* スクレイピング
-* クロスブラウザ検証
+- 作業完了時はリードが全チームメイトを shutdown する
+- チームメイト側から cleanup を実行してはならない
 
 ---
 
-## 🔀 判断基準
+# 4️⃣ Git / GitHub 統治（CI が最上位ルール）
 
-既存ブラウザ状態を使う？
-→ YES：ChromeDevTools
-→ NO：Playwright
+## CI 最上位原則
 
----
+- `.github/workflows/` のコマンドが **ローカルの最優先基準**
+- CI が禁止している操作は **ローカルからも提案しない**（main 直 push 等）
+- CI 失敗時はマージ禁止（CI が通るまで修正してから再試行）
 
-# 🔐 【Git / GitHub 操作ポリシー】
+## 自動実行してよい操作
 
-## 🟢 自動実行可
+- `git worktree add` による WorkTree 作成
+- `git status` / `git diff` / `git log` の参照
+- テスト・ビルド・Lint コマンドの実行
 
-* WorkTree作成
-* ブランチ切替
-* `git status`
-* `git diff`
-* ローカルテスト実行
+## 必ず確認を求めてから行う操作
 
-## 🛑 必ず確認
-
-* git add
-* git commit
-* git push
-* Pull Request 作成
-* Issue更新
-* ラベル操作
+- `git add` / `git commit` / `git push`（履歴に影響する操作はすべて確認）
+- Pull Request の作成・更新・マージ
+- GitHub 上の Issue・ラベル・コメント操作
+- `git rebase` / `git reset` / ブランチ削除
 
 ---
 
-# ⚙ 【CI整合原則】
+# 5️⃣ ブラウザ自動化ツール使い分け
 
-🧱 CIは準憲法である。
+## 判断フロー
 
-* ローカルテストはCIコマンドと同一にする
-* main直push禁止
-* force push禁止
-* CI違反設計は提案しない
-* ワークフロー変更は慎重に扱う
+```
+ブラウザ操作が必要な場合：
+│
+├─ Windows側の起動済みブラウザ（ログイン状態・既存Cookie等）を使う？
+│   └─ YES → ChromeDevTools MCP（mcp__chrome-devtools__*）
+│             環境変数: MCP_CHROME_DEBUG_PORT
+│
+└─ NO → クリーンな環境・新規ブラウザが必要？
+         │
+         ├─ 自動テスト・CI/CD統合 → Playwright MCP
+         ├─ スクレイピング（ログイン不要） → Playwright MCP
+         ├─ クロスブラウザ検証 → Playwright MCP
+         └─ 手動操作との併用 → ChromeDevTools MCP
+```
+
+## ChromeDevTools MCP（既存ブラウザ接続）
+
+**いつ使う**：Windows側で起動済みのEdge/Chromeに接続する場合
+- ログイン済みWebアプリのデバッグ
+- リアルタイムのコンソールエラー監視
+- ネットワークトラフィック（XHR/Fetch）解析
+- DOM変更の追跡・検証
+
+**接続確認**：
+```bash
+echo $MCP_CHROME_DEBUG_PORT
+curl -s http://127.0.0.1:${MCP_CHROME_DEBUG_PORT}/json/version | jq '.'
+```
+
+**主要ツール**：`mcp__chrome-devtools__navigate_page`, `mcp__chrome-devtools__evaluate_script`, `mcp__chrome-devtools__take_screenshot`
+
+## Playwright MCP（クリーン環境・自動テスト）
+
+**いつ使う**：CI/CD統合・独立したブラウザ環境が必要な場合
+- E2Eテスト自動実行
+- クロスブラウザ互換性テスト
+- スクレイピング・データ収集
+
+**主要ツール**：`mcp__plugin_playwright_playwright__browser_navigate`, `mcp__plugin_playwright_playwright__browser_run_code`, `mcp__plugin_playwright_playwright__browser_take_screenshot`
+
+> ⚠️ **Xサーバ不要**：両ツールともヘッドレスモードで動作（Linux環境で利用可能）
 
 ---
 
-# 📋 【タスク進行プロトコル】
+# 6️⃣ 標準レビュー〜修復フロー
 
-1️⃣ `CLAUDE.md` 読込
-2️⃣ `.github/workflows/` 読込
-3️⃣ CIルール要約報告
-4️⃣ タスク構造化
-5️⃣ 実装（SubAgent / Agent Teams 適切使用）
-6️⃣ ローカルテスト実行
-7️⃣ CI影響説明
-8️⃣ commit許可確認
+問題（バグ・セキュリティ・パフォーマンス）を発見・指摘された場合：
 
----
-
-# 🧠 【思考原則】
-
-* 🔄 PRは契約単位
-* 🧩 WorkTreeは責務単位
-* ⚖ 並列は統治下で使う
-* 🧱 CIは最上位ルール
-* 📘 CLAUDE.mdは設計憲法
+1. **問題点の明示**：何が問題か、影響範囲はどこか
+2. **修復オプションの提示**（最低2案）：
+   | 項目 | オプション A | オプション B |
+   |------|------------|------------|
+   | 内容概要 | ... | ... |
+   | 影響範囲 | 小/中/大 | 小/中/大 |
+   | リスク | 低/中/高 | 低/中/高 |
+3. **ユーザーの選択を待つ**（承認なしに実行しない）
+4. **選択されたオプションのみ実行**
+5. **修復後に再レビュー実施**
 
 ---
 
-# 🏁 【到達目標】
+# 7️⃣ 利用可能な Claude Code 機能（全て利用可）
 
-✨ CI成功率最大化
-✨ コンフリクト最小化
-✨ 監査耐性向上
-✨ 並列効率最大化
-✨ GitHub整合100%
-
----
-
-本プロンプトは **単一セッション統治モード** です。
-tmuxマルチペイン構成では使用しないこと。
-INITPROMPTEOF_NOTMUX
+- **SubAgent**：並列での解析・実装・テスト分担
+- **Hooks**：テスト・lint・フォーマット・ログ出力の自動化
+- **Git WorkTree**：機能ブランチ/PR 単位での作業ディレクトリ分離
+- **MCP**：GitHub API・Issue/PR 情報・外部ドキュメント・監視
+- **Agent Teams**：複数の Claude Code インスタンスの協調動作（上記統治規則に従う）
+- **標準機能**：ファイル編集・検索・テスト実行・シェルコマンド実行
+INITPROMPTEOF
 )
 
-trap 'echo "🛑 Ctrl+C を受信 — while ループで exit 130 処理します"' INT
-trap 'echo "❌ エラー発生: line ${LINENO} (exit ${?})" >&2' ERR
+trap 'echo "🛑 Ctrl+C で終了"; exit 0' INT
 
 echo "🔍 DevTools 応答確認..."
 echo "PORT=${PORT}"
@@ -1453,26 +1056,12 @@ done
 export CLAUDE_CHROME_DEBUG_PORT=${PORT}
 export MCP_CHROME_DEBUG_PORT=${PORT}
 
-# Puppeteer MCP: 既存ブラウザへの接続設定
-echo "🔌 既存ブラウザへの接続準備..."
-WS_ENDPOINT=$(curl -s http://127.0.0.1:${PORT}/json/version 2>/dev/null | jq -r '.webSocketDebuggerUrl' 2>/dev/null)
-
-if [ -n "$WS_ENDPOINT" ] && [ "$WS_ENDPOINT" != "null" ]; then
-  echo "✅ WebSocketエンドポイント取得成功: $WS_ENDPOINT"
-  export PUPPETEER_LAUNCH_OPTIONS="{\\\"browserWSEndpoint\\\": \\\"${WS_ENDPOINT}\\\"}"
-  echo "   Puppeteer MCPは既存ブラウザに接続します"
-else
-  echo "⚠️  既存ブラウザが見つかりません。Puppeteerは新規ブラウザを起動します。"
-  export PUPPETEER_LAUNCH_OPTIONS="{\\\"headless\\\": false, \\\"timeout\\\": 30000}"
-fi
-
 # Agent Teams オーケストレーション有効化
 export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 
 # on-startup hook 実行（環境変数設定後）
-# ヘルスチェック失敗はエラーとしない（Claude 起動を妨げない）
 if [ -f ".claude/hooks/on-startup.sh" ]; then
-    bash .claude/hooks/on-startup.sh || echo "⚠️  on-startup.sh 失敗 (exit $?) — Claude 起動は続行します"
+    bash .claude/hooks/on-startup.sh
 fi
 
 # DevTools詳細接続テスト関数
@@ -1532,44 +1121,6 @@ test_devtools_connection() {
 # 詳細テスト実行
 test_devtools_connection
 
-# === tmux 自動インストール (autoInstall: true 時) ===
-if [ "$TMUX_ENABLED" = "true" ] && [ "$TMUX_AUTO_INSTALL" = "true" ] && ! command -v tmux &>/dev/null; then
-    echo "ℹ️  tmux が見つかりません。自動インストールを試みます..."
-    INSTALL_SCRIPT="${SCRIPTS_TMUX_DIR}/tmux-install.sh"
-    if [ -f "$INSTALL_SCRIPT" ]; then
-        if bash "$INSTALL_SCRIPT"; then
-            echo "✅ tmux インストール完了"
-        else
-            echo "⚠️  tmux インストール失敗。通常モードで続行します。"
-        fi
-    else
-        echo "⚠️  tmux-install.sh が見つかりません: ${INSTALL_SCRIPT}"
-    fi
-fi
-
-# === tmux ダッシュボード起動 ===
-# TMUX 環境変数が未設定 = tmux の外からの初回起動
-# → tmux-dashboard.sh へ exec（メインペインで run-claude.sh を再実行）
-# → 再実行時は TMUX 環境変数が設定済みなのでこのブロックをスキップ
-if [ "$TMUX_ENABLED" = "true" ] && [ -z "${TMUX:-}" ]; then
-    if command -v tmux &>/dev/null; then
-        DASHBOARD_SCRIPT="${SCRIPTS_TMUX_DIR}/tmux-dashboard.sh"
-        if [ -f "$DASHBOARD_SCRIPT" ] && [ -x "$DASHBOARD_SCRIPT" ]; then
-            echo ""
-            echo "🖥️  tmux ダッシュボード起動中..."
-            echo "   レイアウト: ${TMUX_LAYOUT}"
-            echo "   セッション: claude-${PROJECT_NAME}-${PORT}"
-            echo ""
-            exec "$DASHBOARD_SCRIPT" "$PROJECT_NAME" "$PORT" "$TMUX_LAYOUT" "cd $(pwd) && ./run-claude.sh"
-        else
-            echo "⚠️  tmux-dashboard.sh が見つかりません: ${DASHBOARD_SCRIPT}"
-            echo "   tmux なしで続行します..."
-        fi
-    else
-        echo "ℹ️  tmux がインストールされていません。通常モードで起動します。"
-    fi
-fi
-
 echo ""
 echo "🚀 Claude 起動 (port=${PORT})"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -1577,80 +1128,12 @@ echo ""
 echo "📝 初期プロンプトを自動入力します..."
 echo ""
 
-# claude コマンド存在確認
-if ! command -v claude &>/dev/null; then
-    echo "❌ claude コマンドが見つかりません。"
-    echo "   インストール: npm install -g @anthropic-ai/claude-code"
-    exit 1
-fi
-
-_INIT_INJECTED=0
 while true; do
-  if [ -n "${TMUX:-}" ]; then
-    # tmux 内: TTY 接続を維持して直接実行（パイプなし → インタラクティブモード保証）
-    # パイプを使うと stdin が非 TTY になり Claude がバッチモードで動作して即終了する
-    echo "🔍 [診断] TMUX=${TMUX:-} | claude=$(command -v claude 2>/dev/null || echo '未発見')"
-    # INIT_PROMPT を tmux バッファ経由で注入（TTY を保持しながら送信）
-    # 最初の起動時のみ注入する（再起動ループでの多重注入を防止）
-    if [ "$_INIT_INJECTED" = "0" ]; then
-      INIT_FILE="/tmp/claude_init_${PORT:-$$}.txt"
-      printf '%s\n' "$INIT_PROMPT_TMUX" > "$INIT_FILE"
-      # バックグラウンドで遅延注入（Claude 起動後 6 秒待ってから貼り付け）
-      # 並列セッションとのバッファ競合を防ぐため名前付きバッファを使用
-      (
-          sleep 6
-          if [ -f "$INIT_FILE" ] && [ -n "${TMUX_PANE:-}" ]; then
-              tmux load-buffer -b "claude_init_${PORT}" "$INIT_FILE"
-              # -p: ブラケットペーストモードで送信（各\nをEnterとして処理しない）
-              tmux paste-buffer -b "claude_init_${PORT}" -t "$TMUX_PANE" -p -d
-              sleep 0.3
-              # ペースト完了後にEnterを送信してINIT_PROMPTを確実に提出
-              tmux send-keys -t "$TMUX_PANE" Enter
-              rm -f "$INIT_FILE"
-          else
-              echo "⚠️  [INIT_PROMPT] TMUX_PANE が未設定のため注入をスキップ" >&2
-              rm -f "$INIT_FILE"
-          fi
-      ) &
-      INJECT_PID=$!
-      _INIT_INJECTED=1
-    else
-      INJECT_PID=""
-    fi
-    # set +e: claude 非ゼロ終了時に set -e でスクリプトが即終了しないよう明示的に無効化
-    set +e
-    claude --dangerously-skip-permissions
-    EXIT_CODE=$?
-    set -e
-    [ -n "$INJECT_PID" ] && kill "$INJECT_PID" 2>/dev/null || true
-    rm -f "$INIT_FILE" 2>/dev/null || true
-  else
-    # 非 tmux: INIT_PROMPT を画面表示してから Claude を直接起動（TTY 維持）
-    if [ "$_INIT_INJECTED" = "0" ] && [ -n "${INIT_PROMPT_NOTMUX}" ]; then
-      echo ""
-      echo "╔══════════════════════════════════════════════════════════════╗"
-      echo "║      📋 初期プロンプト（Claude 起動後に貼り付けてください）      ║"
-      echo "╚══════════════════════════════════════════════════════════════╝"
-      echo ""
-      printf '%s\n' "$INIT_PROMPT_NOTMUX"
-      echo ""
-      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-      echo "💡 上記をコピーし、Claude が起動したら貼り付けてください。"
-      echo "   3秒後に Claude Code を起動します..."
-      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-      sleep 3
-      _INIT_INJECTED=1
-    fi
-    set +e
-    claude --dangerously-skip-permissions
-    EXIT_CODE=$?
-    set -e
-  fi
+  # 初期プロンプトをパイプで自動入力
+  echo "$INIT_PROMPT" | claude --dangerously-skip-permissions
+  EXIT_CODE=$?
 
-  echo "ℹ️  Claude 終了 (exit code: ${EXIT_CODE})"
-  # 正常終了(0)または Ctrl+C(130) は再起動しない
   [ "$EXIT_CODE" -eq 0 ] && break
-  [ "$EXIT_CODE" -eq 130 ] && break
 
   echo ""
   echo "🔄 Claude 再起動 (${RESTART_DELAY}秒後)..."
@@ -1663,26 +1146,14 @@ echo "👋 終了しました"
 # ポート番号を置換
 $RunClaude = $RunClaude -replace '__DEVTOOLS_PORT__', $DevToolsPort
 
-# tmux 設定値を置換
-$TmuxEnabled = if ($Layout -eq "none") { "false" } elseif ($TmuxMode -or ($Config.tmux -and $Config.tmux.enabled)) { "true" } else { "false" }
-$TmuxAutoInstallEarly = if ($Config.tmux -and $Config.tmux.autoInstall) { "true" } else { "false" }
-$TmuxLayout = if ($Layout -ne "" -and $Layout -ne "none") { $Layout } elseif ($Config.tmux -and $Config.tmux.defaultLayout) { $Config.tmux.defaultLayout } else { "auto" }
-$TmuxScriptsDir = "$LinuxBase/$ProjectName/scripts/tmux"
-
-$RunClaude = $RunClaude -replace '__TMUX_ENABLED__', $TmuxEnabled
-$RunClaude = $RunClaude -replace '__TMUX_AUTO_INSTALL__', $TmuxAutoInstallEarly
-$RunClaude = $RunClaude -replace '__TMUX_LAYOUT__', $TmuxLayout
-$RunClaude = $RunClaude -replace '__PROJECT_NAME__', $ProjectName
-$RunClaude = $RunClaude -replace '__SCRIPTS_TMUX_DIR__', $TmuxScriptsDir
-
 # CRLF を LF に変換
 $RunClaude = $RunClaude -replace "`r`n", "`n"
 $RunClaude = $RunClaude -replace "`r", "`n"
 
-# run-claude.sh を Base64 エンコード（SSH 経由で転送するため UNC パスへの直接書き込みは行わない）
-$EncodedRunClaude = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($RunClaude))
+# UTF-8 No BOM で書き込み
+[System.IO.File]::WriteAllText($RunClaudePath, $RunClaude, [System.Text.UTF8Encoding]::new($false))
 
-Write-Host "✅ run-claude.sh 生成完了（SSH 経由転送予定）"
+Write-Host "✅ run-claude.sh 生成完了"
 
 # ============================================================
 # ⑤-b リモートセットアップ統合スクリプト
@@ -1813,75 +1284,6 @@ if ($McpEnabled) {
     }
 }
 
-# === tmux スクリプト base64 エンコーディング ===
-$TmuxAutoInstall = if ($Config.tmux -and $Config.tmux.autoInstall) { "true" } else { "false" }
-$EncodedTmuxScripts = @{}
-$TmuxSetupBlock = "echo 'ℹ️  tmux ダッシュボード無効'"
-
-if ($Config.tmux -and $Config.tmux.enabled) {
-    $TmuxBaseDir = Join-Path (Split-Path $PSScriptRoot -Parent) "tmux"
-
-    $TmuxFiles = @(
-        "tmux-dashboard.sh",
-        "tmux-install.sh",
-        "panes/devtools-monitor.sh",
-        "panes/mcp-health-monitor.sh",
-        "panes/git-status-monitor.sh",
-        "panes/resource-monitor.sh",
-        "panes/agent-teams-monitor.sh",
-        "layouts/default.conf",
-        "layouts/review-team.conf",
-        "layouts/fullstack-dev-team.conf",
-        "layouts/debug-team.conf",
-        "layouts/custom.conf.template"
-    )
-
-    foreach ($TmuxFile in $TmuxFiles) {
-        $TmuxFilePath = Join-Path $TmuxBaseDir $TmuxFile
-        if (Test-Path $TmuxFilePath) {
-            $TmuxContent = Get-Content $TmuxFilePath -Raw -Encoding UTF8
-            $TmuxContent = $TmuxContent -replace "`r`n", "`n"
-            $TmuxContent = $TmuxContent -replace "`r", "`n"
-            $EncodedTmuxScripts[$TmuxFile] = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($TmuxContent))
-        } else {
-            Write-Warning "tmux スクリプトが見つかりません: $TmuxFilePath"
-        }
-    }
-
-    # tmux ファイルデプロイ用 bash コマンドを事前生成
-    # (PowerShell変数を展開済みの文字列として組み立てることで、
-    #  @"..."@ ヒアストリング内での bash 変数エスケープ問題を回避)
-    $tmuxLines = @()
-    $tmuxLines += ""
-    $tmuxLines += "# === tmux スクリプト配置 ==="
-    $tmuxLines += 'echo "🖥️  tmux スクリプト配置中..."'
-    $tmuxLines += 'TMUX_BASE="${LINUX_BASE}/${PROJECT_NAME}/scripts/tmux"'
-    $tmuxLines += 'sudo mkdir -p "${TMUX_BASE}/panes"'
-    $tmuxLines += 'sudo mkdir -p "${TMUX_BASE}/layouts"'
-
-    foreach ($entry in $EncodedTmuxScripts.GetEnumerator()) {
-        $tmuxLines += "echo '" + $entry.Value + "' | base64 -d | sudo tee " + '"${TMUX_BASE}/' + $entry.Key + '"' + ' > /dev/null'
-    }
-
-    $tmuxLines += 'sudo chmod +x "${TMUX_BASE}"/*.sh "${TMUX_BASE}/panes"/*.sh 2>/dev/null || true'
-
-    if ($TmuxAutoInstall -eq "true") {
-        $tmuxLines += ""
-        $tmuxLines += "# tmux 自動インストール"
-        $tmuxLines += 'if ! command -v tmux &>/dev/null; then'
-        $tmuxLines += '    echo "📦 tmux インストール中..."'
-        $tmuxLines += '    "${TMUX_BASE}/tmux-install.sh" || echo "⚠️  tmux インストールに失敗しました"'
-        $tmuxLines += 'else'
-        $tmuxLines += '    echo "✅ tmux インストール済み: $(tmux -V)"'
-        $tmuxLines += 'fi'
-    }
-
-    $tmuxLines += 'echo "✅ tmux スクリプト配置完了"'
-    $TmuxSetupBlock = $tmuxLines -join "`n"
-
-    Write-Host "✅ tmux スクリプト $($EncodedTmuxScripts.Count) 件エンコード完了" -ForegroundColor Green
-}
-
 # 統合リモートセットアップスクリプト
 $RemoteSetupScript = @"
 #!/bin/bash
@@ -1904,14 +1306,6 @@ MCP_BACKUP="`${PROJECT_DIR}/.mcp.json.bak.`${MCP_BACKUP_TIMESTAMP}"
 echo "🔧 リモートセットアップ開始..."
 
 # ============================================================
-# 0. プロジェクトディレクトリの書き込み権限確保（passwordless sudo）
-# ============================================================
-echo "🔑 プロジェクトディレクトリ権限設定中..."
-sudo mkdir -p "`${PROJECT_DIR}"
-sudo chown -R "`${USER}":"`${USER}" "`${PROJECT_DIR}"
-echo "✅ 権限設定完了"
-
-# ============================================================
 # 1. jq インストール確認
 # ============================================================
 if ! command -v jq &>/dev/null; then
@@ -1928,10 +1322,8 @@ fi
 # ============================================================
 # 2. .claude ディレクトリ作成
 # ============================================================
-sudo mkdir -p "`${CLAUDE_DIR}"
+mkdir -p "`${CLAUDE_DIR}"
 mkdir -p "`$HOME/.claude"
-
-$TmuxSetupBlock
 
 # ============================================================
 # 3. Statusline設定（有効な場合）
@@ -1941,12 +1333,12 @@ if [ "`$STATUSLINE_ENABLED" = "true" ]; then
 
     # statusline.sh をデコードして配置
     STATUSLINE_DEST="`${CLAUDE_DIR}/statusline.sh"
-    echo '$EncodedStatusline' | base64 -d | sudo tee "`${STATUSLINE_DEST}" > /dev/null
-    sudo chmod +x "`${STATUSLINE_DEST}"
+    echo '$EncodedStatusline' | base64 -d > "`${STATUSLINE_DEST}"
+    chmod +x "`${STATUSLINE_DEST}"
 
     # settings.json をデコードして配置
     SETTINGS_DEST="`${CLAUDE_DIR}/settings.json"
-    echo '$EncodedSettings' | base64 -d | sudo tee "`${SETTINGS_DEST}" > /dev/null
+    echo '$EncodedSettings' | base64 -d > "`${SETTINGS_DEST}"
 
     # グローバルディレクトリにコピー
     cp "`${STATUSLINE_DEST}" ~/.claude/statusline.sh
@@ -1982,14 +1374,14 @@ fi
 # ============================================================
 echo ""
 echo "🪝 Hooks ディレクトリ作成中..."
-sudo mkdir -p "`${CLAUDE_DIR}/hooks/lib"
+mkdir -p "`${CLAUDE_DIR}/hooks/lib"
 echo "✅ Hooks ディレクトリ作成完了"
 
 # ============================================================
 # 4. .mcp.json バックアップ
 # ============================================================
 if [ -f "`${MCP_PATH}" ]; then
-    sudo cp "`${MCP_PATH}" "`${MCP_BACKUP}"
+    cp "`${MCP_PATH}" "`${MCP_BACKUP}"
     echo "✅ .mcp.json バックアップ完了: `${MCP_BACKUP}"
 else
     echo "ℹ️  .mcp.json が見つかりません"
@@ -2017,9 +1409,10 @@ if [ "`$MCP_ENABLED" = "true" ]; then
 fi
 
 # ============================================================
-# 5. （run-claude.sh は PowerShell 側から別途転送）
+# 5. chmod +x run-claude.sh
 # ============================================================
-echo "ℹ️  run-claude.sh はセットアップ後に個別転送されます"
+chmod +x "`${LINUX_PATH}"
+echo "✅ 実行権限付与完了: `${LINUX_PATH}"
 
 # ============================================================
 # 6. ポートクリーンアップ
@@ -2037,23 +1430,8 @@ $RemoteSetupScript = $RemoteSetupScript -replace "`r", "`n"
 # Base64エンコード
 $EncodedRemoteScript = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($RemoteSetupScript))
 
-# 単一SSH呼び出しで実行（stdin パイプ方式: コマンドライン長制限回避）
-$EncodedRemoteScript | ssh $LinuxHost "tr -d '\r' | base64 -d > /tmp/remote_setup.sh && chmod +x /tmp/remote_setup.sh && /tmp/remote_setup.sh && rm /tmp/remote_setup.sh"
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ リモートセットアップに失敗しました (終了コード: $LASTEXITCODE)" -ForegroundColor Red
-    Write-Host "   上記のエラー出力を確認してください" -ForegroundColor Yellow
-    exit 1
-}
-
-# run-claude.sh を個別転送（stdin パイプ方式: コマンドライン長制限回避）
-Write-Host "📝 run-claude.sh を転送中..."
-$EncodedRunClaude | ssh $LinuxHost "tr -d '\r' | base64 -d > /tmp/run-claude-tmp.sh && chmod +x /tmp/run-claude-tmp.sh && ([ -d $EscapedLinuxPath ] && sudo rm -rf $EscapedLinuxPath || true) && sudo cp -f /tmp/run-claude-tmp.sh $EscapedLinuxPath && rm /tmp/run-claude-tmp.sh"
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ run-claude.sh 転送に失敗しました (終了コード: $LASTEXITCODE)" -ForegroundColor Red
-    exit 1
-} else {
-    Write-Host "✅ run-claude.sh 転送完了"
-}
+# 単一SSH呼び出しで実行
+ssh $LinuxHost "echo '$EncodedRemoteScript' | base64 -d > /tmp/remote_setup.sh && chmod +x /tmp/remote_setup.sh && /tmp/remote_setup.sh && rm /tmp/remote_setup.sh"
 
 # Hooks ファイルを個別転送（コマンドライン長制限回避）
 if ($HooksEnabled) {
@@ -2061,55 +1439,36 @@ if ($HooksEnabled) {
 
     $EscapedLinuxHooksDir = Escape-SSHArgument "$LinuxBase/$ProjectName/.claude/hooks"
 
-    # hooks ディレクトリを事前作成（sudo で権限確保）
-    ssh $LinuxHost "sudo mkdir -p $EscapedLinuxHooksDir/lib && sudo chown -R `$USER:`$USER $EscapedLinuxHooksDir" 2>$null
-
     # on-startup.sh 転送
     if ($EncodedOnStartup) {
-        ssh $LinuxHost "echo '$EncodedOnStartup' | base64 -d | sudo tee $EscapedLinuxHooksDir/on-startup.sh > /dev/null && sudo chmod +x $EscapedLinuxHooksDir/on-startup.sh"
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "  ❌ on-startup.sh 転送失敗 (終了コード: $LASTEXITCODE)" -ForegroundColor Red
-        } else {
-            Write-Host "  ✅ on-startup.sh 転送完了"
-        }
+        ssh $LinuxHost "echo '$EncodedOnStartup' | base64 -d > $EscapedLinuxHooksDir/on-startup.sh && chmod +x $EscapedLinuxHooksDir/on-startup.sh"
+        Write-Host "  ✅ on-startup.sh 転送完了"
     }
 
     # pre-commit.sh 転送
     if ($EncodedPreCommit) {
-        ssh $LinuxHost "echo '$EncodedPreCommit' | base64 -d | sudo tee $EscapedLinuxHooksDir/pre-commit.sh > /dev/null && sudo chmod +x $EscapedLinuxHooksDir/pre-commit.sh"
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "  ❌ pre-commit.sh 転送失敗 (終了コード: $LASTEXITCODE)" -ForegroundColor Red
-        } else {
-            Write-Host "  ✅ pre-commit.sh 転送完了"
+        ssh $LinuxHost "echo '$EncodedPreCommit' | base64 -d > $EscapedLinuxHooksDir/pre-commit.sh && chmod +x $EscapedLinuxHooksDir/pre-commit.sh"
+        Write-Host "  ✅ pre-commit.sh 転送完了"
 
-            # Git hooks シンボリックリンク作成
-            ssh $LinuxHost "cd $EscapedLinuxBase/$EscapedProjectName && [ -d .git/hooks ] && ln -sf ../../.claude/hooks/pre-commit.sh .git/hooks/pre-commit || true" 2>$null
-            Write-Host "  ✅ Git pre-commit hook 登録完了"
-        }
+        # Git hooks シンボリックリンク作成
+        ssh $LinuxHost "cd $EscapedLinuxBase/$EscapedProjectName && [ -d .git/hooks ] && ln -sf ../../.claude/hooks/pre-commit.sh .git/hooks/pre-commit || true" 2>$null
+        Write-Host "  ✅ Git pre-commit hook 登録完了"
     }
 
     # post-checkout.sh 転送
     if ($EncodedPostCheckout) {
-        ssh $LinuxHost "echo '$EncodedPostCheckout' | base64 -d | sudo tee $EscapedLinuxHooksDir/post-checkout.sh > /dev/null && sudo chmod +x $EscapedLinuxHooksDir/post-checkout.sh"
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "  ❌ post-checkout.sh 転送失敗 (終了コード: $LASTEXITCODE)" -ForegroundColor Red
-        } else {
-            Write-Host "  ✅ post-checkout.sh 転送完了"
+        ssh $LinuxHost "echo '$EncodedPostCheckout' | base64 -d > $EscapedLinuxHooksDir/post-checkout.sh && chmod +x $EscapedLinuxHooksDir/post-checkout.sh"
+        Write-Host "  ✅ post-checkout.sh 転送完了"
 
-            # Git hooks シンボリックリンク作成
-            ssh $LinuxHost "cd $EscapedLinuxBase/$EscapedProjectName && [ -d .git/hooks ] && ln -sf ../../.claude/hooks/post-checkout.sh .git/hooks/post-checkout || true" 2>$null
-            Write-Host "  ✅ Git post-checkout hook 登録完了"
-        }
+        # Git hooks シンボリックリンク作成
+        ssh $LinuxHost "cd $EscapedLinuxBase/$EscapedProjectName && [ -d .git/hooks ] && ln -sf ../../.claude/hooks/post-checkout.sh .git/hooks/post-checkout || true" 2>$null
+        Write-Host "  ✅ Git post-checkout hook 登録完了"
     }
 
     # context-loader.sh 転送
     if ($EncodedContextLoader) {
-        ssh $LinuxHost "echo '$EncodedContextLoader' | base64 -d | sudo tee $EscapedLinuxHooksDir/lib/context-loader.sh > /dev/null && sudo chmod +x $EscapedLinuxHooksDir/lib/context-loader.sh"
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "  ❌ context-loader.sh 転送失敗 (終了コード: $LASTEXITCODE)" -ForegroundColor Red
-        } else {
-            Write-Host "  ✅ context-loader.sh 転送完了"
-        }
+        ssh $LinuxHost "echo '$EncodedContextLoader' | base64 -d > $EscapedLinuxHooksDir/lib/context-loader.sh && chmod +x $EscapedLinuxHooksDir/lib/context-loader.sh"
+        Write-Host "  ✅ context-loader.sh 転送完了"
     }
 
     Write-Host "✅ Hooks 設定完了`n"
@@ -2166,7 +1525,9 @@ if ($SelectedProjects.Count -gt 1) {
 
         # ブラウザ起動（プロジェクト専用プロファイル）
         if (-not $SkipBrowser) {
-            $BrowserProfile = Join-Path ($Config.browserProfileDir ?? "C:\") "DevTools-$SelectedBrowser-$AssignedPort"
+            $ProfileBaseDir = $ExecutionContext.InvokeCommand.ExpandString($Config.browserProfileDir)
+            if (-not $ProfileBaseDir -or $ProfileBaseDir -eq "") { $ProfileBaseDir = "C:\" }
+            $BrowserProfile = Join-Path $ProfileBaseDir "DevTools-$SelectedBrowser-$AssignedPort"
             $StartUrl = "http://localhost:$AssignedPort"
 
             $browserArgs = @(
@@ -2250,26 +1611,14 @@ if ($SelectedProjects.Count -gt 1) {
     $EscapedProjectName = Escape-SSHArgument $ProjectName
     $EscapedLinuxBase = Escape-SSHArgument $LinuxBase
     ssh -t -o ControlMaster=no -o ControlPath=none -R "${DevToolsPort}:127.0.0.1:${DevToolsPort}" $LinuxHost "cd $EscapedLinuxBase/$EscapedProjectName && ./run-claude.sh"
-    $SSHExitCode = $LASTEXITCODE
 }
 
 # ===== ログ記録終了 =====
 if ($LogPath) {
     try {
         Stop-Transcript
-
-        # ログをステータス別フォルダに移動
-        $LogRootDir = if ([System.IO.Path]::IsPathRooted($Config.logging.logDir)) {
-            $Config.logging.logDir
-        } else {
-            Join-Path $RootDir $Config.logging.logDir
-        }
-
-        Move-LogToStatusFolder -LogPath $LogPath -LogRootDir $LogRootDir -ExitCode $SSHExitCode -IsError $false
+        Write-Host "`n📝 ログ記録終了: $LogPath" -ForegroundColor Gray
     } catch {
-        Write-Warning "ログ記録終了処理エラー: $_"
+        # Transcript未開始の場合はエラーを無視
     }
 }
-
-# SSH終了コードをプロセス終了コードとして伝播（start.bat の ERRORLEVEL 検出に必要）
-exit $SSHExitCode
