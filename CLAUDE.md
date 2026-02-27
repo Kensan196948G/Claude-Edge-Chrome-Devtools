@@ -238,8 +238,12 @@ Claude-EdgeChromeDevTools/
 │   │   └── ErrorHandler.psm1            # カテゴリ別エラーハンドリング
 │   ├── main/
 │   │   ├── Claude-DevTools.ps1          # ★ v1.3.0 NEW: 統合スクリプト (CLI引数対応)
-│   │   ├── Claude-EdgeDevTools.ps1      # Edge版メインスクリプト (後方互換)
-│   │   └── Claude-ChromeDevTools-Final.ps1  # Chrome版メインスクリプト (後方互換)
+│   │   ├── Claude-EdgeDevTools.ps1      # Edge版ラッパー (→ Claude-DevTools.ps1 -Browser edge)
+│   │   └── Claude-ChromeDevTools-Final.ps1  # Chrome版ラッパー (→ Claude-DevTools.ps1 -Browser chrome)
+│   ├── deprecated/                          # ★ v1.7.0 NEW: 非推奨スクリプト保管
+│   │   ├── Claude-EdgeDevTools.ps1          # 旧Edge版フルスクリプト (参照用)
+│   │   ├── Claude-ChromeDevTools-Final.ps1  # 旧Chrome版フルスクリプト (参照用)
+│   │   └── README.md                        # 移行ガイド
 │   ├── setup/
 │   │   ├── setup-windows-terminal.ps1       # Windows Terminal自動設定
 │   │   └── setup-windows-terminal.bat       # Windows Terminal設定ガイド
@@ -270,12 +274,22 @@ Claude-EdgeChromeDevTools/
 │       ├── tmux-ops/SKILL.md                # tmux操作スキル
 │       ├── agent-teams-ops/SKILL.md         # Agent Teams運用スキル
 │       └── devops-monitor/SKILL.md          # DevOps監視スキル
+├── tests/                               # ★ v1.4.0+ Pester ユニットテスト
+│   ├── Config.Tests.ps1                 # Config.psm1 テスト
+│   ├── PortManager.Tests.ps1            # PortManager.psm1 テスト
+│   ├── BrowserManager.Tests.ps1         # BrowserManager.psm1 テスト (v1.7.0)
+│   ├── UI.Tests.ps1                     # UI.psm1 テスト (v1.7.0)
+│   ├── SSHHelper.Tests.ps1              # SSHHelper.psm1 テスト
+│   ├── ScriptGenerator.Tests.ps1        # ScriptGenerator.psm1 テスト
+│   ├── ErrorHandler.Tests.ps1           # ErrorHandler.psm1 テスト
+│   └── Integration.Tests.ps1            # 統合テスト
 ├── docs/
-│   ├── SystemAdministrator/         # システム管理者向けドキュメント (12ファイル)
-│   └── non-SystemAdministrator/     # 一般ユーザー向けドキュメント (6ファイル)
-├── start.bat                        # 対話型ランチャー (tmuxサブメニュー含む)
-├── CLAUDE.md                        # Claude Code向けプロジェクト指示書
-└── GEMINI.md                        # プロジェクトドキュメント(日本語)
+│   ├── plans/                           # 設計ドキュメント
+│   ├── SystemAdministrator/             # システム管理者向けドキュメント (12ファイル)
+│   └── non-SystemAdministrator/         # 一般ユーザー向けドキュメント (6ファイル)
+├── start.bat                            # 対話型ランチャー (tmuxサブメニュー含む)
+├── CLAUDE.md                            # Claude Code向けプロジェクト指示書
+└── GEMINI.md                            # プロジェクトドキュメント(日本語)
 ```
 
 ### 動的生成ファイル
