@@ -118,15 +118,15 @@ jobs:
             }
           }
 
-          # CLI パラメータ定義の確認
+          # CLI パラメータ定義の確認（param() ブロック内の $ParamName 宣言を検出）
           $mainScript = Get-Content "scripts/main/Claude-DevTools.ps1" -Raw
-          $cliParams = @('-Browser', '-Project', '-Port', '-NonInteractive', '-DryRun', '-Layout')
+          $cliParams = @('Browser', 'Project', 'Port', 'NonInteractive', 'DryRun', 'Layout')
           $paramErrors = 0
           foreach ($param in $cliParams) {
-            if ($mainScript -match [regex]::Escape($param)) {
-              Write-Host "  ✅ CLI パラメータ: $param" -ForegroundColor Green
+            if ($mainScript -match "\`$$param\b") {
+              Write-Host "  ✅ CLI パラメータ: `$$param" -ForegroundColor Green
             } else {
-              Write-Host "  ❌ CLI パラメータが見つかりません: $param" -ForegroundColor Red
+              Write-Host "  ❌ CLI パラメータが見つかりません: `$$param" -ForegroundColor Red
               $paramErrors++
             }
           }
