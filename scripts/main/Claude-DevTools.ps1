@@ -362,9 +362,11 @@ if ($versionInfo) {
 # ===== run-claude.sh 生成 =====
 Write-Host "`n📝 run-claude.sh 生成中..."
 
-# INIT_PROMPT テンプレート読み込み（外部ファイル優先）
+# INIT_PROMPT テンプレート読み込み（言語設定に応じて自動選択）
 $TemplatesDir = Join-Path (Split-Path $PSScriptRoot -Parent) "templates"
-$InitPromptFile = Join-Path $TemplatesDir "init-prompt-ja.txt"
+$langSetting  = if ($Config.claudeCode -and $Config.claudeCode.settings) { $Config.claudeCode.settings.language } else { "" }
+$lang         = if ($langSetting -match '英語|english|en') { 'en' } else { 'ja' }
+$InitPromptFile = Join-Path $TemplatesDir "init-prompt-${lang}.txt"
 $InitPromptContent = ""
 if (Test-Path $InitPromptFile) {
     $InitPromptContent = Get-Content $InitPromptFile -Raw -Encoding UTF8
@@ -391,6 +393,7 @@ $runClaudeParams = @{
     Layout         = $effectiveLayout
     TmuxEnabled    = $tmuxEnabled
     InitPrompt     = $InitPromptContent
+    Language       = $lang
     ClaudeEnv      = $Config.claudeCode.env
 }
 
