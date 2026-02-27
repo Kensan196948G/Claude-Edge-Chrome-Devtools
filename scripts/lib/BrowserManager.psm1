@@ -59,11 +59,13 @@ function Start-DevToolsBrowser {
         Write-Host "📁 ブラウザプロファイル作成: $BrowserProfile" -ForegroundColor Cyan
     }
 
-    $args = @(
+    $browserArgs = @(
         "--remote-debugging-port=$DevToolsPort",
         "--user-data-dir=$BrowserProfile",
         "--no-first-run",
         "--no-default-browser-check",
+        "--remote-allow-origins=*",
+        "--auto-open-devtools-for-tabs",
         "--disable-background-timer-throttling",
         "--disable-backgrounding-occluded-windows",
         "--disable-renderer-backgrounding",
@@ -72,7 +74,7 @@ function Start-DevToolsBrowser {
 
     try {
         Write-Host "🚀 $BrowserName 起動中 (ポート: $DevToolsPort)..." -ForegroundColor Cyan
-        $process = Start-Process -FilePath $BrowserExe -ArgumentList $args -PassThru
+        $process = Start-Process -FilePath $BrowserExe -ArgumentList $browserArgs -PassThru
 
         if ($null -eq $process) {
             throw "ブラウザプロセスの起動に失敗しました"
