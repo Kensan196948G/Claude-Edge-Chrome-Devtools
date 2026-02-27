@@ -107,6 +107,7 @@ jobs:
           # .mcp.json モック作成
           mkdir -p test-project/.claude/hooks
           cp scripts/hooks/on-startup.sh test-project/.claude/hooks/
+          chmod +x test-project/.claude/hooks/on-startup.sh
           echo '{"mcpServers":{"test-mcp":{}}}' > test-project/.mcp.json
 
           cd test-project
@@ -123,7 +124,9 @@ jobs:
 
           mkdir -p .claude/hooks
           cp ../scripts/hooks/pre-commit.sh .claude/hooks/
+          chmod +x .claude/hooks/pre-commit.sh
           ln -s ../../.claude/hooks/pre-commit.sh .git/hooks/pre-commit
+          chmod +x .git/hooks/pre-commit
 
           # Token を含むファイルを作成
           echo "ghp_1234567890123456789012345678901234567" > secret.txt
