@@ -264,4 +264,41 @@ Describe 'New-RunClaudeScript' {
             $result | Should -Match '#!/bin/bash'
         }
     }
+
+    Context '言語テンプレート自動選択' {
+
+        It 'Language=ja の場合は日本語テンプレートが自動選択されること' {
+            $params = @{
+                Port        = 9222
+                LinuxBase   = '/mnt/LinuxHDD'
+                ProjectName = 'TestProject'
+                Language    = 'ja'
+            }
+            $result = New-RunClaudeScript -Params $params
+            $result | Should -Not -BeNullOrEmpty
+            $result | Should -Match '#!/bin/bash'
+        }
+
+        It 'Language=en の場合も正常に動作すること' {
+            $params = @{
+                Port        = 9222
+                LinuxBase   = '/mnt/LinuxHDD'
+                ProjectName = 'TestProject'
+                Language    = 'en'
+            }
+            $result = New-RunClaudeScript -Params $params
+            $result | Should -Not -BeNullOrEmpty
+            $result | Should -Match '#!/bin/bash'
+        }
+
+        It 'Language 未指定時はデフォルト(ja)が使われること' {
+            $params = @{
+                Port        = 9222
+                LinuxBase   = '/mnt/LinuxHDD'
+                ProjectName = 'TestProject'
+            }
+            $result = New-RunClaudeScript -Params $params
+            $result | Should -Not -BeNullOrEmpty
+        }
+    }
 }

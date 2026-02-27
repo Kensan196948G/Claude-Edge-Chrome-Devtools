@@ -67,6 +67,28 @@ function Import-DevToolsConfig {
     }
     Write-Host "✅ ポート範囲検証OK ($($config.ports.Count) ポート)" -ForegroundColor Green
 
+    # initPromptFile の検証（オプション）
+    if ($null -ne $config.initPromptFile -and -not [string]::IsNullOrWhiteSpace($config.initPromptFile)) {
+        if (-not (Test-Path $config.initPromptFile)) {
+            Write-Warning "initPromptFile が見つかりません: $($config.initPromptFile) (スキップして続行)"
+        } else {
+            Write-Host "✅ initPromptFile 検証OK: $($config.initPromptFile)" -ForegroundColor Green
+        }
+    }
+
+    # tmux 設定のスキーマ検証（オプション）
+    if ($null -ne $config.tmux) {
+        $tmuxValidLayouts = @('auto', 'default', 'review-team', 'fullstack-dev-team', 'debug-team')
+        if ($null -ne $config.tmux.defaultLayout -and
+            $tmuxValidLayouts -notcontains $config.tmux.defaultLayout) {
+            Write-Warning "tmux.defaultLayout が無効な値です: '$($config.tmux.defaultLayout)' (有効値: $($tmuxValidLayouts -join ', '))"
+        }
+        if ($null -ne $config.tmux.enabled -and $config.tmux.enabled -isnot [bool]) {
+            Write-Warning "tmux.enabled はブール値である必要があります: '$($config.tmux.enabled)'"
+        }
+        Write-Host "✅ tmux 設定スキーマ検証OK" -ForegroundColor Green
+    }
+
     return $config
 }
 

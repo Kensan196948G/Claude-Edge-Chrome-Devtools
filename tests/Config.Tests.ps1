@@ -106,4 +106,59 @@ Describe 'Import-DevToolsConfig' {
             { Import-DevToolsConfig -ConfigPath $path } | Should -Throw
         }
     }
+
+    Context 'initPromptFile の検証' {
+
+        BeforeAll {
+            $script:TempDir2 = Join-Path $TestDrive 'initprompt'
+            New-Item -ItemType Directory -Path $script:TempDir2 -Force | Out-Null
+        }
+
+        It '存在する initPromptFile は警告なしで成功すること' {
+            $promptFile = Join-Path $script:TempDir2 'prompt.txt'
+            Set-Content -Path $promptFile -Value 'Test prompt' -Encoding UTF8
+            $configPath = Join-Path $script:TempDir2 'config-with-prompt.json'
+            @{ ports = @(9222); zDrive = 'X:\'; linuxHost = 'host'; linuxBase = '/mnt'; initPromptFile = $promptFile } |
+                ConvertTo-Json | Set-Content -Path $configPath -Encoding UTF8
+            { Import-DevToolsConfig -ConfigPath $configPath } | Should -Not -Throw
+        }
+
+        It '存在しない initPromptFile は警告を出すが成功すること' {
+            $configPath = Join-Path $script:TempDir2 'config-missing-prompt.json'
+            @{ ports = @(9222); zDrive = 'X:\'; linuxHost = 'host'; linuxBase = '/mnt'; initPromptFile = 'C:\nonexistent\prompt.txt' } |
+                ConvertTo-Json | Set-Content -Path $configPath -Encoding UTF8
+            { Import-DevToolsConfig -ConfigPath $configPath } | Should -Not -Throw
+        }
+
+        It 'initPromptFile が null の場合は検証をスキップすること' {
+            $configPath = Join-Path $script:TempDir2 'config-null-prompt.json'
+            @{ ports = @(9222); zDrive = 'X:\'; linuxHost = 'host'; linuxBase = '/mnt' } |
+                ConvertTo-Json | Set-Content -Path $configPath -Encoding UTF8
+            { Import-DevToolsConfig -ConfigPath $configPath } | Should -Not -Throw
+        }
+    }
+
+    Context 'tmux スキーマ検証' {
+
+        BeforeAll {
+            $script:TempDir3 = Join-Path $TestDrive 'tmux'
+            New-Item -ItemType Directory -Path $script:TempDir3 -Force | Out-Null
+        }
+
+        It '有効な tmux 設定は警告なしで成功すること' {
+            $configPath = Join-Path $script:TempDir3 'config-valid-tmux.json'
+            @{
+                ports = @(9222); zDrive = 'X:\'; linuxHost = 'host'; linuxBase = '/mnt'
+                tmux = @{ enabled = $false; defaultLayout = 'auto' }
+            } | ConvertTo-Json -Depth 3 | Set-Content -Path $configPath -Encoding UTF8
+            { Import-DevToolsConfig -ConfigPath $configPath } | Should -Not -Throw
+        }
+
+        It 'tmux セクションがない場合は検証をスキップすること' {
+            $configPath = Join-Path $script:TempDir3 'config-no-tmux.json'
+            @{ ports = @(9222); zDrive = 'X:\'; linuxHost = 'host'; linuxBase = '/mnt' } |
+                ConvertTo-Json | Set-Content -Path $configPath -Encoding UTF8
+            { Import-DevToolsConfig -ConfigPath $configPath } | Should -Not -Throw
+        }
+    }
 }

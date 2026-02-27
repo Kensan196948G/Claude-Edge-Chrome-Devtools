@@ -1,0 +1,72 @@
+name: Pester Unit Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  pester-tests:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Pester & Run Tests
+        id: run-tests
+        shell: pwsh
+        run: |
+          Install-Module -Name Pester -MinimumVersion 5.0 -Force -SkipPublisherCheck
+          Import-Module Pester
+
+          $config = New-PesterConfiguration
+          $config.Run.Path = "tests"
+          $config.Run.PassThru = $true
+          $config.TestResult.Enabled = $true
+          $config.TestResult.OutputPath = "test-results.xml"
+
+          $result = Invoke-Pester -Configuration $config
+
+          "passed_count=$($result.PassedCount)" >> $env:GITHUB_OUTPUT
+          "failed_count=$($result.FailedCount)" >> $env:GITHUB_OUTPUT
+          "skipped_count=$($result.SkippedCount)" >> $env:GITHUB_OUTPUT
+          "total_count=$($result.TotalCount)" >> $env:GITHUB_OUTPUT
+          "test_failed=$($result.FailedCount -gt 0)" >> $env:GITHUB_OUTPUT
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pester-test-results
+          path: test-results.xml
+
+      - name: Post PR Comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        if: always() && github.event_name == 'pull_request'
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          message: |
+            ## 🧪 Pester テスト結果
+
+            | 項目 | 件数 |
+            |------|------|
+            | ✅ 成功 | ${{ steps.run-tests.outputs.passed_count }} |
+            | ❌ 失敗 | ${{ steps.run-tests.outputs.failed_count }} |
+            | ⏭️ スキップ | ${{ steps.run-tests.outputs.skipped_count }} |
+            | 📊 合計 | ${{ steps.run-tests.outputs.total_count }} |
+
+            ${{ steps.run-tests.outputs.test_failed == 'True' && '❌ テストは失敗しました。' || '🎉 テストは成功しました。' }}
+
+      - name: Fail if Tests Failed
+        if: always()
+        shell: pwsh
+        run: |
+          if ("${{ steps.run-tests.outputs.test_failed }}" -eq "True") {
+            Write-Error "テストが失敗したため、ワークフローを失敗状態にします。"
+            exit 1
+          }
