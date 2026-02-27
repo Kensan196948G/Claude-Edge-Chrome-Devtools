@@ -228,9 +228,18 @@ Claude-EdgeChromeDevTools/
 ├── config/
 │   └── config.json                  # 中央集約設定 (claudeCode + tmux セクション含む)
 ├── scripts/
+│   ├── lib/                             # ★ v1.3.0 NEW: モジュール群
+│   │   ├── Config.psm1                  # 設定読み込み・検証・バックアップ・履歴管理
+│   │   ├── PortManager.psm1             # ポート検出・管理
+│   │   ├── BrowserManager.psm1          # ブラウザ起動・プロセス管理・DevTools待機
+│   │   ├── SSHHelper.psm1               # SSH引数エスケープ・接続テスト・バッチ実行
+│   │   ├── UI.psm1                      # ブラウザ/プロジェクト選択・ドライブ解決UI
+│   │   ├── ScriptGenerator.psm1         # run-claude.sh生成・base64エンコード・JSON生成
+│   │   └── ErrorHandler.psm1            # カテゴリ別エラーハンドリング
 │   ├── main/
-│   │   ├── Claude-EdgeDevTools.ps1          # Edge版メインスクリプト
-│   │   └── Claude-ChromeDevTools-Final.ps1  # Chrome版メインスクリプト
+│   │   ├── Claude-DevTools.ps1          # ★ v1.3.0 NEW: 統合スクリプト (CLI引数対応)
+│   │   ├── Claude-EdgeDevTools.ps1      # Edge版メインスクリプト (後方互換)
+│   │   └── Claude-ChromeDevTools-Final.ps1  # Chrome版メインスクリプト (後方互換)
 │   ├── setup/
 │   │   ├── setup-windows-terminal.ps1       # Windows Terminal自動設定
 │   │   └── setup-windows-terminal.bat       # Windows Terminal設定ガイド
@@ -253,6 +262,8 @@ Claude-EdgeChromeDevTools/
 │   │       ├── fullstack-dev-team.conf      # 開発チーム (6ペイン)
 │   │       ├── debug-team.conf              # デバッグチーム (3ペイン)
 │   │       └── custom.conf.template         # カスタムテンプレート
+│   ├── templates/
+│   │   └── init-prompt-ja.txt           # ★ 外部化済み INIT_PROMPT テンプレート
 │   └── statusline.sh                        # Claude Code Statuslineスクリプト
 ├── .claude/
 │   └── skills/
