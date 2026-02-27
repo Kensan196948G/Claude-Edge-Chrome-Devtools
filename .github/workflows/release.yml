@@ -10,6 +10,9 @@ on:
         description: 'バージョン番号 (例: v1.2.1)'
         required: true
 
+permissions:
+  contents: write
+
 jobs:
   create-release:
     name: Create GitHub Release
@@ -42,63 +45,112 @@ jobs:
 
           if [ -n "$PREVIOUS_TAG" ]; then
             echo "前回リリース: ${PREVIOUS_TAG}"
-
-            # コミットログから変更履歴を生成
-            CHANGELOG=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+            COMMIT_RANGE="${PREVIOUS_TAG}..HEAD"
           else
             echo "初回リリース"
-            CHANGELOG=$(git log --pretty=format:"- %s (%h)" --no-merges | head -20)
+            COMMIT_RANGE="HEAD"
           fi
 
-          # マルチライン対応
-          echo "changelog<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGELOG" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          # カテゴリ別コミット分類
+          FEATURES=$(git log $COMMIT_RANGE --pretty=format:"%s" --no-merges 2>/dev/null | grep -E '^feat' | sed 's/^/- /' || true)
+          FIXES=$(git log $COMMIT_RANGE --pretty=format:"%s" --no-merges 2>/dev/null | grep -E '^fix' | sed 's/^/- /' || true)
+          DOCS=$(git log $COMMIT_RANGE --pretty=format:"%s" --no-merges 2>/dev/null | grep -E '^docs' | sed 's/^/- /' || true)
+          TESTS=$(git log $COMMIT_RANGE --pretty=format:"%s" --no-merges 2>/dev/null | grep -E '^test' | sed 's/^/- /' || true)
+          REFACTORS=$(git log $COMMIT_RANGE --pretty=format:"%s" --no-merges 2>/dev/null | grep -E '^(refactor|chore)' | sed 's/^/- /' || true)
+          OTHER=$(git log $COMMIT_RANGE --pretty=format:"%s" --no-merges 2>/dev/null | grep -vE '^(feat|fix|docs|test|refactor|chore)' | sed 's/^/- /' || true)
+
+          # フルコミット一覧（フォールバック用）
+          ALL_COMMITS=$(git log $COMMIT_RANGE --pretty=format:"- %s (%h)" --no-merges | head -30 || true)
+
+          # マルチライン出力
+          {
+            echo "features<<EOF"
+            echo "$FEATURES"
+            echo "EOF"
+            echo "fixes<<EOF"
+            echo "$FIXES"
+            echo "EOF"
+            echo "docs<<EOF"
+            echo "$DOCS"
+            echo "EOF"
+            echo "tests<<EOF"
+            echo "$TESTS"
+            echo "EOF"
+            echo "refactors<<EOF"
+            echo "$REFACTORS"
+            echo "EOF"
+            echo "other<<EOF"
+            echo "$OTHER"
+            echo "EOF"
+            echo "all_commits<<EOF"
+            echo "$ALL_COMMITS"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.version }}
-          name: Release ${{ steps.version.outputs.version }}
+          name: "🚀 Release ${{ steps.version.outputs.version }}"
           body: |
             ## 🎉 Claude-EdgeChromeDevTools ${{ steps.version.outputs.version }}
 
-            ### 📋 主な変更点
+            **リリース日**: ${{ github.event.repository.updated_at }}
 
-            ${{ steps.changelog.outputs.changelog }}
+            ---
+
+            ${{ steps.changelog.outputs.features != '' && '### ✨ 新機能・改善' || '' }}
+            ${{ steps.changelog.outputs.features }}
+
+            ${{ steps.changelog.outputs.fixes != '' && '### 🐛 バグ修正' || '' }}
+            ${{ steps.changelog.outputs.fixes }}
+
+            ${{ steps.changelog.outputs.docs != '' && '### 📚 ドキュメント' || '' }}
+            ${{ steps.changelog.outputs.docs }}
+
+            ${{ steps.changelog.outputs.tests != '' && '### 🧪 テスト' || '' }}
+            ${{ steps.changelog.outputs.tests }}
+
+            ${{ steps.changelog.outputs.refactors != '' && '### 🔧 リファクタリング・保守' || '' }}
+            ${{ steps.changelog.outputs.refactors }}
+
+            ${{ steps.changelog.outputs.other != '' && '### 📦 その他' || '' }}
+            ${{ steps.changelog.outputs.other }}
+
+            ---
+
+            ### 📋 全変更コミット
+
+            ${{ steps.changelog.outputs.all_commits }}
+
+            ---
 
             ### 📦 インストール
 
-            ```powershell
-            # リポジトリをクローン
+            ```cmd
             git clone https://github.com/Kensan196948G/Claude-Edge-Chrome-Devtools.git
             cd Claude-Edge-Chrome-Devtools
-
-            # config.json を作成
-            cp config/config.json.template config/config.json
-            # config.json を編集（環境に合わせて設定）
-
-            # 実行
             start.bat
             ```
 
             ### 🔗 リンク
 
             - [ドキュメント](https://github.com/Kensan196948G/Claude-Edge-Chrome-Devtools/tree/main/docs)
-            - [トラブルシューティング](https://github.com/Kensan196948G/Claude-Edge-Chrome-Devtools/blob/main/docs/SystemAdministrator/05_トラブルシューティング(Troubleshooting).txt)
-            - [FAQ](https://github.com/Kensan196948G/Claude-Edge-Chrome-Devtools/blob/main/docs/SystemAdministrator/08_FAQ.txt)
+            - [MIGRATION.md](https://github.com/Kensan196948G/Claude-Edge-Chrome-Devtools/blob/main/MIGRATION.md)
+            - [README.md](https://github.com/Kensan196948G/Claude-Edge-Chrome-Devtools/blob/main/README.md)
 
-            ### 🙏 謝辞
+            ---
 
-            Co-Authored-By: Claude Sonnet 4.5 (1M context) <noreply@anthropic.com>
+            Co-Authored-By: GitHub Copilot <223556219+Copilot@users.noreply.github.com>
           draft: false
-          prerelease: false
+          prerelease: ${{ contains(steps.version.outputs.version, '-') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-artifacts:
     name: Build Release Artifacts
     runs-on: windows-latest
+    needs: create-release
 
     steps:
       - uses: actions/checkout@v4
@@ -112,21 +164,20 @@ jobs:
           $packageName = "Claude-EdgeChromeDevTools-$version"
 
           # パッケージディレクトリ作成
-          New-Item -ItemType Directory -Path $packageName -Force
+          New-Item -ItemType Directory -Path $packageName -Force | Out-Null
 
           # 必要なファイルをコピー
           $include = @(
-            "scripts/",
-            "config/config.json.template",
-            "docs/",
-            ".claude/",
-            ".github/",
+            "scripts",
+            "config",
+            "docs",
+            ".claude",
+            "tests",
             "start.bat",
             "CLAUDE.md",
             "README.md",
-            "GEMINI.md",
-            "LICENSE",
-            ".gitignore"
+            "MIGRATION.md",
+            "LICENSE"
           )
 
           foreach ($item in $include) {
@@ -135,13 +186,16 @@ jobs:
             }
           }
 
+          # 機密情報を含む可能性のあるファイルを除外
+          Remove-Item -Path "$packageName\config\backups" -Recurse -Force -ErrorAction SilentlyContinue
+
           # ZIP 圧縮
-          Compress-Archive -Path $packageName -DestinationPath "${packageName}.zip"
+          Compress-Archive -Path $packageName -DestinationPath "${packageName}.zip" -Force
 
           Write-Host "✅ パッケージ作成完了: ${packageName}.zip"
 
       - name: Upload Release Asset
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: Claude-EdgeChromeDevTools-*.zip
         env:
