@@ -142,6 +142,7 @@ function New-RunClaudeScript {
     $envVars     = if ($Params.ContainsKey('EnvVars'))        { $Params['EnvVars'] }        else { @{} }
     $initPrompt  = if ($Params.ContainsKey('InitPrompt'))     { $Params['InitPrompt'] }     else { "" }
     $initPromptFile = if ($Params.ContainsKey('InitPromptFile')) { $Params['InitPromptFile'] } else { "" }
+    $language    = if ($Params.ContainsKey('Language'))       { $Params['Language'] }       else { "ja" }
 
     # InitPromptFile が指定されていればファイルから読み込む（InitPrompt より優先度低）
     if ([string]::IsNullOrWhiteSpace($initPrompt) -and -not [string]::IsNullOrWhiteSpace($initPromptFile)) {
@@ -149,6 +150,17 @@ function New-RunClaudeScript {
             $initPrompt = Get-Content -Path $initPromptFile -Raw -Encoding UTF8
         } else {
             Write-Warning "InitPromptFile が見つかりません: $initPromptFile (デフォルトプロンプトを使用)"
+        }
+    }
+
+    # InitPromptFile が未指定の場合、言語設定に基づきデフォルトテンプレートを自動選択
+    if ([string]::IsNullOrWhiteSpace($initPrompt)) {
+        $scriptDir = Split-Path -Parent $PSScriptRoot
+        $templateName = if ($language -eq 'en') { 'init-prompt-en.txt' } else { 'init-prompt-ja.txt' }
+        $autoTemplatePath = Join-Path $scriptDir "templates\$templateName"
+        if (Test-Path $autoTemplatePath) {
+            $initPrompt = Get-Content -Path $autoTemplatePath -Raw -Encoding UTF8
+            Write-Host "📝 言語テンプレート自動選択: $templateName" -ForegroundColor Cyan
         }
     }
 

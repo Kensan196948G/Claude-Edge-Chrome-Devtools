@@ -20,10 +20,8 @@ jobs:
         run: |
           Write-Host "🔍 PowerShell スクリプト構文チェック (.ps1)" -ForegroundColor Cyan
 
-          # 既知の構文エラーを持つスクリプト（bash heredoc が PowerShell パーサーと非互換）
-          $knownIssues = @(
-            "Claude-EdgeDevTools.ps1"  # @' ヒアストリング内に bash heredoc ('INITPROMPTEOF') を含む
-          )
+          # 既知の構文エラーを持つスクリプト（v1.5.0で全て修正済み）
+          $knownIssues = @()
 
           $scripts = Get-ChildItem -Path scripts -Filter *.ps1 -Recurse
           $errors = 0
