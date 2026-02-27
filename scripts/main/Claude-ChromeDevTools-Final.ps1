@@ -1,6 +1,12 @@
 # ============================================================
 # Claude-ChromeDevTools-Final.ps1
 # プロジェクト選択 + DevToolsポート判別 + run-claude.sh自動生成 + 自動接続
+#
+# ⚠️  非推奨 (Deprecated since v1.3.0)
+#     このスクリプトは v1.3.0 以降、非推奨となりました。
+#     代替: scripts\main\Claude-DevTools.ps1 -Browser chrome
+#     移行ガイド: MIGRATION.md を参照してください。
+#     削除予定: v2.0.0
 # ============================================================
 
 [CmdletBinding()]
@@ -27,6 +33,10 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+# ⚠️  非推奨警告
+Write-Warning "⚠️  Claude-ChromeDevTools-Final.ps1 は非推奨です。代わりに Claude-DevTools.ps1 -Browser chrome を使用してください。(MIGRATION.md 参照)"
+Start-Sleep -Seconds 2
 
 # ===== ログ記録開始 =====
 $LogPath = $null

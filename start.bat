@@ -10,8 +10,9 @@ echo  PowerShell Script Launcher
 echo ===============================================
 echo.
 echo  [Claude DevTools Launch]
-echo  1. Claude Edge DevTools Launch
-echo  2. Claude Chrome DevTools Launch
+echo  U. Unified DevTools (Edge/Chrome) [v1.4.0 推奨]
+echo  1. Claude Edge DevTools Launch [旧版]
+echo  2. Claude Chrome DevTools Launch [旧版]
 echo.
 echo  [Test / Diagnostics]
 echo  3. Edge DevTools Connection Test
@@ -43,6 +44,11 @@ if not defined choice (
     goto menu
 )
 
+if /i "%choice%"=="U" (
+    set "script_name=scripts\main\Claude-DevTools.ps1"
+    set "fast_return=1"
+    goto execute_with_flags
+)
 if "%choice%"=="1" (
     set "script_name=scripts\main\Claude-EdgeDevTools.ps1"
     set "fast_return=1"
