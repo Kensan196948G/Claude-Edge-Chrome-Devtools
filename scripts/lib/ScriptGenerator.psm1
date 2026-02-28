@@ -264,18 +264,27 @@ while true; do
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo "`$INIT_PROMPT"
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        claude --dangerously-skip-permissions -p "`$INIT_PROMPT" || true
+        claude --dangerously-skip-permissions "`$INIT_PROMPT" || true
     else
         claude --dangerously-skip-permissions || true
     fi
     echo ""
-    echo "🔄 Claude Code が終了しました。再起動しますか？ [Y/n]"
+    echo "🔄 Claude Code が終了しました。再起動モードを選択してください:"
+    echo "  [P] プロンプト指示付きで再起動 (デフォルト)"
+    echo "  [I] 対話モードで再起動 (プロンプト指示なし)"
+    echo "  [N] 終了"
     read -r RESTART_ANSWER
-    if [[ "`$RESTART_ANSWER" =~ ^[Nn] ]]; then
-        echo "👋 終了します"
-        break
-    fi
-    INIT_PROMPT=""
+    case "`$RESTART_ANSWER" in
+        [Nn])
+            echo "👋 終了します"
+            break
+            ;;
+        [Ii])
+            INIT_PROMPT=""
+            ;;
+        *)
+            ;;
+    esac
 done
 "@
 

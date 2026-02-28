@@ -340,19 +340,24 @@ Describe 'New-RunClaudeScript' {
 
     Context 'リスタートループの条件分岐' {
 
-        It 'INIT_PROMPT が非空の場合に -p フラグ付きで起動する条件が含まれること' {
+        It 'INIT_PROMPT が非空の場合に対話モードで起動する条件が含まれること' {
             $result = New-RunClaudeScript -Params $script:ValidParams
             $result | Should -Match 'if \[ -n "\$INIT_PROMPT" \]'
         }
 
-        It 'INIT_PROMPT が空の場合に -p フラグなしで起動するelse節が含まれること' {
+        It 'INIT_PROMPT が空の場合にプロンプトなしで起動するelse節が含まれること' {
             $result = New-RunClaudeScript -Params $script:ValidParams
             $result | Should -Match 'claude --dangerously-skip-permissions \|\| true'
         }
 
-        It '-p "$INIT_PROMPT" 付きの起動コマンドが含まれること' {
+        It 'INIT_PROMPT 付きの対話モード起動コマンドが含まれること（-p フラグなし）' {
             $result = New-RunClaudeScript -Params $script:ValidParams
-            $result | Should -Match 'claude --dangerously-skip-permissions -p "\$INIT_PROMPT"'
+            $result | Should -Match 'claude --dangerously-skip-permissions "\$INIT_PROMPT"'
+        }
+
+        It '-p フラグが使われていないこと（print mode ではなく対話モード）' {
+            $result = New-RunClaudeScript -Params $script:ValidParams
+            $result | Should -Not -Match 'claude --dangerously-skip-permissions -p "\$INIT_PROMPT"'
         }
 
         It 'INIT_PROMPT 表示用の echo 文が含まれること' {
@@ -363,6 +368,34 @@ Describe 'New-RunClaudeScript' {
         It 'プロンプト表示の区切り線が含まれること' {
             $result = New-RunClaudeScript -Params $script:ValidParams
             $result | Should -Match '📋 初期プロンプト指示内容'
+        }
+    }
+
+    Context '再起動モード選択メニュー' {
+
+        It '再起動モード選択の案内メッセージが含まれること' {
+            $result = New-RunClaudeScript -Params $script:ValidParams
+            $result | Should -Match '再起動モードを選択してください'
+        }
+
+        It 'プロンプト指示付き再起動オプションが含まれること' {
+            $result = New-RunClaudeScript -Params $script:ValidParams
+            $result | Should -Match 'プロンプト指示付きで再起動'
+        }
+
+        It '対話モード再起動オプションが含まれること' {
+            $result = New-RunClaudeScript -Params $script:ValidParams
+            $result | Should -Match '対話モードで再起動'
+        }
+
+        It 'case文による再起動モード分岐が含まれること' {
+            $result = New-RunClaudeScript -Params $script:ValidParams
+            $result | Should -Match 'case "\$RESTART_ANSWER" in'
+        }
+
+        It 'esac でcase文が閉じられていること' {
+            $result = New-RunClaudeScript -Params $script:ValidParams
+            $result | Should -Match 'esac'
         }
     }
 }

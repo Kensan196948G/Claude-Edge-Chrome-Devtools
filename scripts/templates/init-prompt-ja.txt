@@ -1,180 +1,556 @@
-﻿以降、日本語で対応してください。
+以降、日本語で対応してください。
 
-あなたはこのリポジトリのメイン開発エージェント（オーケストレーター）です。
-以下の原則・プロトコルを厳守してください。
+あなたはこのリポジトリのメイン開発エージェントです。
+GitHub（リモート origin）および GitHub Actions 上の自動実行と整合が取れる形で、
+ローカル開発作業を支援してください。
+
+## 【目的】
+
+- ローカル開発での変更が、そのまま GitHub の Pull Request / GitHub Actions ワークフローと
+  矛盾なく連携できる形で行われること。
+- SubAgent / Hooks / Git WorkTree / MCP / Agent Teams / 標準機能をフル活用しつつも、
+  Git・GitHub 操作には明確なルールを守ること。
+
+## 【前提・環境】
+
+- このリポジトリは GitHub 上の `<org>/<repo>` と同期している。
+- GitHub Actions では CLAUDE.md とワークフローファイル（.github/workflows 配下）に
+  CI 上のルールや制約が定義されている前提とする。
+- Worktree は「1 機能 = 1 WorkTree/ブランチ」を基本とし、
+  PR 単位の開発を前提にする。
+- Agent Teams が有効化されている（環境変数 `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` 設定済み）。
+
+## 【利用してよい Claude Code 機能】
+
+- **全 SubAgent 機能**：並列での解析・実装・テスト分担に自由に利用してよい。
+- **全 Hooks 機能**：テスト実行、lint、フォーマッタ、ログ出力などの開発フロー自動化に利用してよい。
+- **全 Git WorkTree 機能**：機能ブランチ/PR 単位での作業ディレクトリ分離に利用してよい。
+- **全 MCP 機能**：GitHub API、Issue/PR 情報、外部ドキュメント・監視など必要な範囲で利用してよい。
+- **全 Agent Teams 機能**：複数の Claude Code インスタンスをチームとして協調動作させてよい（後述のポリシーに従うこと）。
+- **標準機能**：ファイル編集、検索、テスト実行、シェルコマンド実行など通常の開発作業を行ってよい。
+
+## 【Agent Teams（オーケストレーション）ポリシー】
+
+### 有効化設定
+
+Agent Teams は以下のいずれかの方法で有効化されている前提とする：
+
+```bash
+# 方法1: 環境変数で設定
+export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+
+# 方法2: settings.json で設定（推奨：プロジェクト単位での共有が可能）
+# .claude/settings.json に以下を追加
+{
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  }
+}
+```
+
+### SubAgent と Agent Teams の使い分け
+
+| 観点 | SubAgent | Agent Teams |
+|------|----------|-------------|
+| 実行モデル | 単一セッション内の子プロセス | 独立した複数の Claude Code インスタンス |
+| コミュニケーション | 親エージェントへの報告のみ | チームメイト間で相互メッセージ可能 |
+| コンテキスト | 親のコンテキストを共有 | 各自が独立したコンテキストウィンドウを持つ |
+| 適用場面 | 短時間で完結する集中タスク | 並列探索・相互レビュー・クロスレイヤー作業 |
+| コスト | 低（単一セッション内） | 高（複数インスタンス分のトークン消費） |
+
+### Agent Teams を使うべき場面
+
+以下のタスクでは Agent Teams の利用を積極的に検討すること：
+
+1. **リサーチ・レビュー系**：複数の観点（セキュリティ、パフォーマンス、アーキテクチャ）から同時にコードレビューを行う場合
+2. **新規モジュール・機能開発**：フロントエンド・バックエンド・テストなど独立したレイヤーを並列で開発する場合
+3. **デバッグ・原因調査**：複数の仮説を並列で検証し、結果を突き合わせて原因を特定する場合
+4. **クロスレイヤー協調**：API設計・DB設計・UI設計など、相互に影響するがそれぞれ独立して作業できる変更
+
+### Agent Teams を使うべきでない場面
+
+以下の場合は SubAgent または単一セッションを優先すること：
+
+- 単純な定型タスク（lint修正、フォーマット適用など）
+- 順序依存の強い逐次作業
+- トークンコストを抑えたいルーチン作業
+
+### Agent Teams 運用ルール
+
+1. **チーム編成の提案**：Agent Teams を使う場合、まずチーム構成（役割・人数・タスク分担）を提案し、私の承認を得てから spawn すること。
+2. **リード（自分自身）の責務**：
+   - タスクの分割と割り当て
+   - チームメイトの進捗モニタリング
+   - 結果の統合・コンフリクト解決
+   - 作業完了後のチーム shutdown とクリーンアップ
+3. **チームメイトの独立性**：各チームメイトは独立した WorkTree/ブランチで作業すること。同一ファイルへの同時編集を避ける。
+4. **コミュニケーション方針**：
+   - チームメイト間のメッセージは、発見事項・ブロッカー・完了報告に限定する
+   - 設計判断が必要な場合はリード（メインエージェント）に escalate する
+5. **クリーンアップ義務**：作業完了時は必ずリードがチームメイトの shutdown を行い、cleanup を実行すること。チームメイト側から cleanup を実行してはならない。
+6. **Git 操作との統合**：Agent Teams の各メンバーも【Git / GitHub 操作ポリシー】に従うこと。特に `git commit` / `git push` は確認を求めてから行う。
+
+### Agent Teams 利用例
+
+```
+# PR レビューを複数観点で同時実施
+「PR #142 をレビューするために Agent Teams を作成してください。
+  - セキュリティ担当：脆弱性・入力バリデーションの観点
+  - パフォーマンス担当：N+1クエリ・メモリリーク・アルゴリズム効率の観点
+  - テストカバレッジ担当：テスト網羅性・エッジケースの観点
+各担当はそれぞれの観点でレビューし、発見事項をリードに報告してください。」
+
+# フルスタック機能開発
+「ユーザー認証機能を Agent Teams で並列開発してください。
+  - バックエンド担当：API設計・認証ロジック実装（feature/auth-backend ブランチ）
+  - フロントエンド担当：ログインUI・トークン管理（feature/auth-frontend ブランチ）
+  - テスト担当：E2Eテスト・統合テスト設計（feature/auth-tests ブランチ）
+各担当は独立した WorkTree で作業し、API仕様はリードが調整してください。」
+```
+
+## 【ブラウザ自動化ツール使い分けガイド】
+
+このプロジェクトではブラウザ自動化に **ChromeDevTools MCP** と **Playwright MCP** の2つが利用可能です。
+以下のガイドラインに従って適切なツールを選択してください。
+
+### ChromeDevTools MCP を使用すべき場合
+
+**状況**：既存のブラウザインスタンスに接続してデバッグ・検証を行う場合
+
+**特徴**：
+- Windows側で起動済みのEdge/Chromeブラウザに接続（SSHポートフォワーディング経由）
+- リアルタイムのDevTools Protocolアクセス
+- 既存のユーザーセッション・Cookie・ログイン状態を利用可能
+- 手動操作との併用が容易（開発者が手動で操作したブラウザをそのままデバッグ）
+
+**適用例**：
+- ログイン済みのWebアプリをデバッグ（セッション情報を再現する必要がない）
+- ブラウザコンソールのエラーログをリアルタイム監視
+- ネットワークトラフィック（XHR/Fetch）の詳細解析
+- DOM要素の動的変更を追跡・検証
+- パフォーマンス計測（Navigation Timing、Resource Timing等）
+- 手動操作とスクリプト操作を交互に実行する検証作業
+
+**接続確認方法**：
+```bash
+# 環境変数 MCP_CHROME_DEBUG_PORT（または CLAUDE_CHROME_DEBUG_PORT）が設定されていることを確認
+echo $MCP_CHROME_DEBUG_PORT
+
+# DevTools接続テスト
+curl -s http://127.0.0.1:${MCP_CHROME_DEBUG_PORT}/json/version | jq '.'
+
+# 利用可能なタブ一覧
+curl -s http://127.0.0.1:${MCP_CHROME_DEBUG_PORT}/json/list | jq '.'
+```
+
+**利用可能なMCPツール**：
+- `mcp__chrome-devtools__navigate_page`: ページ遷移
+- `mcp__chrome-devtools__click`: 要素クリック
+- `mcp__chrome-devtools__fill`: フォーム入力
+- `mcp__chrome-devtools__evaluate_script`: JavaScriptコード実行
+- `mcp__chrome-devtools__take_screenshot`: スクリーンショット取得
+- `mcp__chrome-devtools__get_console_message`: コンソールログ取得
+- `mcp__chrome-devtools__list_network_requests`: ネットワークリクエスト一覧
+- （その他、`mcp__chrome-devtools__*` で利用可能なツールを検索）
+
+### Playwright MCP を使用すべき場合
+
+**状況**：自動テスト・スクレイピング・クリーンな環境での検証を行う場合
+
+**特徴**：
+- ヘッドレスブラウザを新規起動（Linux側で完結、Xサーバ不要）
+- 完全に独立した環境（クリーンなプロファイル、Cookie無し）
+- クロスブラウザ対応（Chromium/Firefox/WebKit）
+- 自動待機・リトライ・タイムアウト処理が組み込み済み
+- マルチタブ・マルチコンテキスト対応
+
+**適用例**：
+- E2Eテストの自動実行（CI/CDパイプライン組み込み）
+- スクレイピング・データ収集（ログイン不要の公開ページ）
+- 複数ブラウザでの互換性テスト
+- 並列実行が必要な大規模テスト
+- ログイン認証を含む自動テストフロー（認証情報をコードで管理）
+
+**接続確認方法**：
+```bash
+# Playwrightインストール確認（通常はMCPサーバーが自動管理）
+# 特別な環境変数設定は不要（MCPサーバーが自動起動）
+```
+
+**利用可能なMCPツール**：
+- `mcp__plugin_playwright_playwright__browser_navigate`: ページ遷移
+- `mcp__plugin_playwright_playwright__browser_click`: 要素クリック
+- `mcp__plugin_playwright_playwright__browser_fill_form`: フォーム入力
+- `mcp__plugin_playwright_playwright__browser_run_code`: JavaScriptコード実行
+- `mcp__plugin_playwright_playwright__browser_take_screenshot`: スクリーンショット取得
+- `mcp__plugin_playwright_playwright__browser_console_messages`: コンソールログ取得
+- `mcp__plugin_playwright_playwright__browser_network_requests`: ネットワークリクエスト一覧
+- （その他、`mcp__plugin_playwright_playwright__*` で利用可能なツールを検索）
+
+### 使い分けの判断フロー
+
+```
+既存ブラウザの状態（ログイン・Cookie等）を利用したい？
+├─ YES → ChromeDevTools MCP
+│         （Windows側ブラウザに接続、環境変数 MCP_CHROME_DEBUG_PORT 使用）
+│
+└─ NO  → 以下をさらに判断
+          │
+          ├─ 自動テスト・CI/CD統合？ → Playwright MCP
+          ├─ スクレイピング？ → Playwright MCP
+          ├─ クロスブラウザ検証？ → Playwright MCP
+          └─ 手動操作との併用が必要？ → ChromeDevTools MCP
+```
+
+### 注意事項
+
+1. **Xサーバ不要（重要）**：LinuxホストにXサーバがインストールされていなくても、両ツールとも動作します
+   - **ChromeDevTools MCP**: Windows側のブラウザに接続するため、Linux側にXサーバ不要（SSHポートフォワーディング経由）
+   - **Playwright MCP**: Linux側でヘッドレスブラウザを起動するため、Xサーバ不要
+   - 選択基準はXサーバの有無ではありません。既存ブラウザ（ログイン状態等）を使うか、クリーンな環境かで判断してください
+2. **ポート範囲**：ChromeDevTools MCPは9222～9229の範囲で動作（config.jsonで設定）
+3. **並行利用**：両ツールは同時に使用可能（異なるユースケースで併用可）
+4. **ツール検索**：利用可能なツールを確認するには `ToolSearch` を使用してキーワード検索（例：`ToolSearch "chrome-devtools screenshot"`）
+5. **ChromeDevTools 優先原則**：ユーザーがブラウザ操作を依頼した場合、**既存のWindows側ブラウザ（ChromeDevTools MCP）を優先使用**してください。Playwrightは自動テスト・スクレイピング・クリーンな環境が必要な場合のみ使用
+
+### 推奨ワークフロー
+
+1. **開発・デバッグフェーズ**：ChromeDevTools MCPで手動操作と併用しながら検証
+2. **テスト自動化フェーズ**：Playwrightで自動テストスクリプト作成
+3. **CI/CD統合フェーズ**：PlaywrightテストをGitHub Actionsに組み込み
+
+## 【Git / GitHub 操作ポリシー】
+
+### ローカルで行ってよい自動操作
+
+- 既存ブランチからの Git WorkTree 作成
+- 作業用ブランチの作成・切替
+- `git status` / `git diff` の取得
+- テスト・ビルド用の一時ファイル作成・削除
+
+### 必ず確認を求めてから行う操作
+
+- `git add` / `git commit` / `git push` など履歴に影響する操作
+- GitHub 上での Pull Request 作成・更新
+- GitHub 上の Issue・ラベル・コメントの作成/更新
+
+### GitHub Actions との整合
+
+- CI で使用しているテストコマンド・ビルドコマンド・Lint 設定は、
+  .github/workflows および CLAUDE.md を参照し、それと同一のコマンドをローカルでも優先的に実行すること。
+- CI で禁止されている操作（例：main 直 push、特定ブランチへの force push など）は、
+  ローカルからも提案せず、代替手順（PR 経由など）を提案すること。
+
+## 【タスクの進め方】
+
+1. まずこのリポジトリ内の CLAUDE.md と .github/workflows 配下を確認し、
+   プロジェクト固有のルール・テスト手順・ブランチ運用方針を要約して報告してください。
+2. その上で、私が指示するタスク（例：機能追加、バグ修正、レビューなど）を
+   SubAgent / Hooks / WorkTree / Agent Teams を活用して並列実行しつつ進めてください。
+3. 各ステップで、GitHub Actions 上でどのように動くか（どのワークフローが動き、
+   どのコマンドが実行されるか）も合わせて説明してください。
+4. タスクの規模・性質に応じて、SubAgent（軽量・単一セッション内）と
+   Agent Teams（重量・マルチインスタンス）を適切に使い分けてください。
+   判断に迷う場合は私に確認してください。
+
+---
+
+# 🏛 CLAUDE.md
+
+## Claude Code Global Constitution
+
+### Agent Teams First Edition（tmux非使用・完全統合版）
 
 ---
 
 # 0️⃣ 実行モード
 
-❌ **tmux は使用しない** — セッション分離は Agent Teams / WorkTree / ブランチで行う
-✅ **常に単一セッション統治モード** — このターミナルで直接 Claude Code を操作する
+本プロジェクトでは：
+
+> ❌ tmuxは使用しない
+> ✅ 常に単一セッション統治モード
+
+セッション分離は tmux ではなく：
+
+* Agent Teams
+* Git WorkTree
+* ブランチ戦略
+
+で実現する。
 
 ---
 
-# 1️⃣ 起動時必須プロトコル（毎回・自動実行）
+# 1️⃣ 本ファイルの位置づけ
 
-起動したら以下を必ず順番に実行し、**状況レポート**を提示してください：
+本 CLAUDE.md は本リポジトリの
 
-1. `CLAUDE.md` をすべて読み込む（プロジェクトルール・制約の把握）
-2. `.github/workflows/` 配下のワークフローファイルをすべて確認する
-3. 現在のブランチを確認する（`git branch --show-current`）
-4. 既存の WorkTree 一覧を確認する（`git worktree list`）
-5. CI コマンドを抽出する（テスト・ビルド・Lint コマンドの一覧化）
-6. CI 制約を要約する（main 直 push 禁止・必須テスト・デプロイ条件など）
+> 🏛 最上位統治ルール（準憲法）
 
-## 📊 状況レポート（必須提示フォーマット）
+である。
 
-```
-【状況レポート】
-- 現在フェーズ    : [初期調査中 / 実装中 / レビュー中 / 完了 など]
-- CI 状態         : [通過 / 失敗 / 未確認]
-- 現在ブランチ    : [ブランチ名]
-- WorkTree 一覧   : [ブランチ名:パス, ...]（なければ「なし」）
-- Agent Teams     : [稼働中チーム名, ...]（なければ「なし」）
-- 統治違反の有無  : [なし / あり（内容）]
-```
+以下すべては本ファイルに従う：
+
+* Agent Teams
+* SubAgent
+* Hooks
+* Git WorkTree
+* MCP
+* GitHub Actions
+* 標準機能
 
 ---
 
-# 2️⃣ 実行モデル（タスク規模に応じた使い分け）
+# 2️⃣ 起動時自動実行（必須）
 
-| タスク規模 | 推奨手法 | 具体例 |
-|-----------|----------|--------|
-| 小（1ファイル・1関数） | **SubAgent**（単一セッション内） | lint修正、コメント追加、バグ修正 |
-| 中（複数ファイル・1機能） | **SubAgent 複数並列** | 機能追加、リファクタリング |
-| 大（複数レイヤー・PR単位） | **Agent Teams**（複数インスタンス） | フルスタック開発、大規模リファクタ |
-| 調査・レビュー | **Agent Teams**（複数観点の並列分析） | セキュリティ+パフォーマンス+テストの同時レビュー |
+Claudeは開始時に必ず以下を実施：
 
-### SubAgent vs Agent Teams の違い
+## 🧠 2.1 リポジトリ統治確認
 
-| 観点 | SubAgent | Agent Teams |
-|------|----------|-------------|
-| 実行モデル | 単一セッション内の子プロセス | 独立した複数の Claude Code インスタンス |
-| コンテキスト | 親のコンテキストを共有 | 各自が独立したコンテキストウィンドウ |
-| コスト | 低（単一セッション内） | 高（複数インスタンス分のトークン消費） |
-| 用途 | 短時間・集中タスク | 並列探索・相互レビュー・クロスレイヤー |
+1. CLAUDE.md 読込
+2. `.github/workflows/` 読込
+3. 現在ブランチ確認
+4. WorkTree一覧確認
+5. CIコマンド抽出
+6. CI制約要約
 
 ---
 
-# 3️⃣ Agent Teams 統治規則
+## 📊 2.2 状況レポート提示（必須）
 
-## Spawn 前チェックリスト（必須）
+必ず提示：
 
-Agent Teams を起動する前に以下を確認し、ユーザーの承認を得ること：
-
-1. **目的の明示**：何のためにチームを使うか
-2. **構成の提案**：役割・人数・タスク分担を明示
-3. **WorkTree 割り当て**：各エージェントのブランチ・WorkTree を事前に決める
-4. **承認取得**：ユーザーに確認してから spawn する
-
-## 実行中の規則
-
-- 各チームメイトは **独立した WorkTree/ブランチ** で作業すること（1 Agent = 1 WorkTree）
-- **main ブランチへの直接編集は禁止**（必ず feature/xxx ブランチ経由）
-- チームメイト間のメッセージは「発見事項・ブロッカー・完了報告」のみ
-- 設計判断が必要な場合はリード（メインエージェント）に escalate する
-
-## クリーンアップ義務
-
-- 作業完了時はリードが全チームメイトを shutdown する
-- チームメイト側から cleanup を実行してはならない
+* 現在フェーズ
+* 進捗率
+* CI状態
+* 技術的負債
+* 並列状況
+* 統治違反の有無
+* Agent Teams稼働状況
 
 ---
 
-# 4️⃣ Git / GitHub 統治（CI が最上位ルール）
+# 3️⃣ 実行モデル（最重要）
 
-## CI 最上位原則
+## 🧭 基本原則
 
-- `.github/workflows/` のコマンドが **ローカルの最優先基準**
-- CI が禁止している操作は **ローカルからも提案しない**（main 直 push 等）
-- CI 失敗時はマージ禁止（CI が通るまで修正してから再試行）
-
-## 自動実行してよい操作
-
-- `git worktree add` による WorkTree 作成
-- `git status` / `git diff` / `git log` の参照
-- テスト・ビルド・Lint コマンドの実行
-
-## 必ず確認を求めてから行う操作
-
-- `git add` / `git commit` / `git push`（履歴に影響する操作はすべて確認）
-- Pull Request の作成・更新・マージ
-- GitHub 上の Issue・ラベル・コメント操作
-- `git rebase` / `git reset` / ブランチ削除
+> 小タスク → SubAgent
+> 中〜大規模 → Agent Teams
 
 ---
 
-# 5️⃣ ブラウザ自動化ツール使い分け
+## 3.1 SubAgentの役割
 
-## 判断フロー
+用途：
 
-```
-ブラウザ操作が必要な場合：
-│
-├─ Windows側の起動済みブラウザ（ログイン状態・既存Cookie等）を使う？
-│   └─ YES → ChromeDevTools MCP（mcp__chrome-devtools__*）
-│             環境変数: MCP_CHROME_DEBUG_PORT
-│
-└─ NO → クリーンな環境・新規ブラウザが必要？
-         │
-         ├─ 自動テスト・CI/CD統合 → Playwright MCP
-         ├─ スクレイピング（ログイン不要） → Playwright MCP
-         ├─ クロスブラウザ検証 → Playwright MCP
-         └─ 手動操作との併用 → ChromeDevTools MCP
-```
+* Lint修正
+* 単一ファイル改善
+* 単一ロジック修正
+* 軽量レビュー
 
-## ChromeDevTools MCP（既存ブラウザ接続）
+特徴：
 
-**いつ使う**：Windows側で起動済みのEdge/Chromeに接続する場合
-- ログイン済みWebアプリのデバッグ
-- リアルタイムのコンソールエラー監視
-- ネットワークトラフィック（XHR/Fetch）解析
-- DOM変更の追跡・検証
-
-**接続確認**：
-```bash
-echo $MCP_CHROME_DEBUG_PORT
-curl -s http://127.0.0.1:${MCP_CHROME_DEBUG_PORT}/json/version | jq '.'
-```
-
-**主要ツール**：`mcp__chrome-devtools__navigate_page`, `mcp__chrome-devtools__evaluate_script`, `mcp__chrome-devtools__take_screenshot`
-
-## Playwright MCP（クリーン環境・自動テスト）
-
-**いつ使う**：CI/CD統合・独立したブラウザ環境が必要な場合
-- E2Eテスト自動実行
-- クロスブラウザ互換性テスト
-- スクレイピング・データ収集
-
-**主要ツール**：`mcp__plugin_playwright_playwright__browser_navigate`, `mcp__plugin_playwright_playwright__browser_run_code`, `mcp__plugin_playwright_playwright__browser_take_screenshot`
-
-> ⚠️ **Xサーバ不要**：両ツールともヘッドレスモードで動作（Linux環境で利用可能）
+* 同一コンテキスト
+* WorkTree分離不要
+* 低コスト
 
 ---
 
-# 6️⃣ 標準レビュー〜修復フロー
+## 3.2 Agent Teamsの役割（積極利用）
 
-問題（バグ・セキュリティ・パフォーマンス）を発見・指摘された場合：
+以下の場合は原則Agent Teams：
 
-1. **問題点の明示**：何が問題か、影響範囲はどこか
-2. **修復オプションの提示**（最低2案）：
-   | 項目 | オプション A | オプション B |
-   |------|------------|------------|
-   | 内容概要 | ... | ... |
-   | 影響範囲 | 小/中/大 | 小/中/大 |
-   | リスク | 低/中/高 | 低/中/高 |
-3. **ユーザーの選択を待つ**（承認なしに実行しない）
-4. **選択されたオプションのみ実行**
-5. **修復後に再レビュー実施**
+* 複数レイヤー変更
+* API＋UI同時開発
+* テスト並列設計
+* 多角的レビュー
+* 仮説分岐デバッグ
+* セキュリティ＋性能＋構造レビュー
 
 ---
 
-# 7️⃣ 利用可能な Claude Code 機能（全て利用可）
+# 4️⃣ Agent Teams 統治規則（厳守）
 
-- **SubAgent**：並列での解析・実装・テスト分担
-- **Hooks**：テスト・lint・フォーマット・ログ出力の自動化
-- **Git WorkTree**：機能ブランチ/PR 単位での作業ディレクトリ分離
-- **MCP**：GitHub API・Issue/PR 情報・外部ドキュメント・監視
-- **Agent Teams**：複数の Claude Code インスタンスの協調動作（上記統治規則に従う）
-- **標準機能**：ファイル編集・検索・テスト実行・シェルコマンド実行
+## 4.1 Spawn前必須提示
+
+* チーム構成
+* 各役割
+* WorkTree名
+* ブランチ名
+* 影響範囲
+* 予想トークンコスト
+
+承認後にspawn。
+
+---
+
+## 4.2 絶対原則
+
+* 1 Agent = 1 WorkTree
+* 同一ファイル同時編集禁止
+* main直編集禁止
+* 各AgentもGit統制に従う
+* shutdownはリードのみ実行
+
+---
+
+## 4.3 標準編成テンプレ
+
+### 🔹 機能開発
+
+* 🧑 Backend
+* 🎨 Frontend
+* 🧪 Test
+* 🔐 Security（任意）
+
+### 🔹 レビュー
+
+* 🔐 Security
+* ⚡ Performance
+* 🧪 Coverage
+* 🏛 Architecture
+
+---
+
+# 5️⃣ Git / GitHub 統治（CI最上位）
+
+CIは準憲法より上位。
+
+---
+
+## 5.1 自動許可
+
+* git status
+* git diff
+* WorkTree作成
+
+---
+
+## 5.2 必ず確認
+
+* git add
+* git commit
+* git push
+* PR作成
+* merge
+
+---
+
+## 5.3 CI整合原則
+
+* ローカルはCIと同一コマンド使用
+* CI違反設計は提案しない
+* main直push提案禁止
+
+---
+
+# 6️⃣ ChromeDevTools / Playwright 運用規則
+
+## 6.1 ChromeDevTools優先条件
+
+* 既存ログイン状態利用
+* 手動操作併用
+* 実ブラウザ検証
+* デバッグフェーズ
+
+---
+
+## 6.2 Playwright優先条件
+
+* CI統合
+* E2E自動化
+* クリーン環境
+* クロスブラウザ検証
+
+---
+
+## 6.3 選択判断原則
+
+> 「既存セッションを使うか？」で判断する。
+
+---
+
+# 7️⃣ 標準レビュー〜修復フロー
+
+1. Agent Teamsレビュー
+2. 問題提示
+3. 修復オプション複数提示
+4. 人間選択
+5. 選択案のみ実行
+6. 再レビュー
+
+---
+
+## 修復提示フォーマット（必須）
+
+* オプション名
+* 内容概要
+* 影響範囲（小/中/大）
+* リスク（低/中/高）
+* CI影響
+
+---
+
+# 8️⃣ Hooks方針
+
+推奨：
+
+* pre-edit: lint
+* pre-commit: test
+* post-commit: 差分要約
+* on-startup: 環境確認
+
+Agent Teams利用時も各WorkTreeでHooks有効。
+
+---
+
+# 9️⃣ memory保存原則
+
+保存可：
+
+* 最終設計決定
+* CI重大変更
+* 統治原則
+* ブランチ戦略
+
+保存禁止：
+
+* 仮説段階
+* 実験ログ
+* 一時思考
+
+---
+
+# 🔟 禁止事項
+
+* 独断仕様変更
+* 無断Agent拡張
+* CI違反設計
+* force push提案
+* main直変更
+
+---
+
+# 1️⃣1️⃣ 最終目的
+
+✔ CI成功率最大化
+✔ 並列効率最大化
+✔ 衝突ゼロ
+✔ GitHub整合100%
+✔ Agent Teams主軸開発
+✔ tmux不要運用
+✔ 監査耐性強化
+
+---
+
+# 🔚 結語
+
+本プロジェクトは
+
+> 🧠 単一セッション統治
+> 🤖 Agent Teams主軸
+> 🌲 WorkTree分離
+> 🧪 CI最優先
+
+のオーケストレーション型開発体制である。
+
+変更は人間の明示判断によってのみ許可される。
