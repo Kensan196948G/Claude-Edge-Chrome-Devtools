@@ -394,7 +394,7 @@ $runClaudeParams = @{
     TmuxEnabled    = $tmuxEnabled
     InitPrompt     = $InitPromptContent
     Language       = $lang
-    ClaudeEnv      = $Config.claudeCode.env
+    EnvVars        = $Config.claudeCode.env
 }
 
 $RunClaudeContent = New-RunClaudeScript -Params $runClaudeParams
@@ -563,7 +563,17 @@ Write-Host ""
 
 $EscapedLinuxBaseForSSH   = Escape-SSHArgument $LinuxBase
 $EscapedProjectNameForSSH = Escape-SSHArgument $ProjectName
-ssh -t -o ControlMaster=no -o ControlPath=none -R "${DevToolsPort}:127.0.0.1:${DevToolsPort}" $LinuxHost "cd $EscapedLinuxBaseForSSH/$EscapedProjectNameForSSH && ./run-claude.sh"
+
+# SSH stderr 出力（ポートフォワーディング警告等）が $ErrorActionPreference="Stop" で
+# terminating error になるのを防止するため、stderr を抑制し $LASTEXITCODE で判定する
+$ErrorActionPreference = "Continue"
+ssh -t -o ControlMaster=no -o ControlPath=none -R "${DevToolsPort}:127.0.0.1:${DevToolsPort}" $LinuxHost "cd $EscapedLinuxBaseForSSH/$EscapedProjectNameForSSH && ./run-claude.sh" 2>$null
+$sshExitCode = $LASTEXITCODE
+$ErrorActionPreference = "Stop"
+
+if ($sshExitCode -ne 0) {
+    Write-Warning "SSH セッションが終了コード $sshExitCode で終了しました"
+}
 
 # ===== ログ記録終了 =====
 if ($LogPath) {

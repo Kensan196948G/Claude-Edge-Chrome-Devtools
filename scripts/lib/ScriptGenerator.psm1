@@ -157,7 +157,7 @@ function New-RunClaudeScript {
     if ([string]::IsNullOrWhiteSpace($initPrompt)) {
         $scriptDir = Split-Path -Parent $PSScriptRoot
         $templateName = if ($language -eq 'en') { 'init-prompt-en.txt' } else { 'init-prompt-ja.txt' }
-        $autoTemplatePath = Join-Path $scriptDir "templates\$templateName"
+        $autoTemplatePath = Join-Path $scriptDir "templates`$templateName"
         if (Test-Path $autoTemplatePath) {
             $initPrompt = Get-Content -Path $autoTemplatePath -Raw -Encoding UTF8
             Write-Host "📝 言語テンプレート自動選択: $templateName" -ForegroundColor Cyan
@@ -222,31 +222,31 @@ DEVTOOLS_PORT=$port
 SESSION_NAME="$sessionName"
 
 # --- 環境変数設定 ---
-export CLAUDE_CHROME_DEBUG_PORT="\$DEVTOOLS_PORT"
-export MCP_CHROME_DEBUG_PORT="\$DEVTOOLS_PORT"
+export CLAUDE_CHROME_DEBUG_PORT="`$DEVTOOLS_PORT"
+export MCP_CHROME_DEBUG_PORT="`$DEVTOOLS_PORT"
 $envExports
-cd "\$PROJECT_ROOT" || { echo "❌ プロジェクトディレクトリに移動できません: \$PROJECT_ROOT"; exit 1; }
+cd "`$PROJECT_ROOT" || { echo "❌ プロジェクトディレクトリに移動できません: `$PROJECT_ROOT"; exit 1; }
 
-echo "📁 プロジェクト: \$PROJECT_ROOT"
-echo "🔌 DevToolsポート: \$DEVTOOLS_PORT"
+echo "📁 プロジェクト: `$PROJECT_ROOT"
+echo "🔌 DevToolsポート: `$DEVTOOLS_PORT"
 
 # --- DevTools接続確認 ---
 echo "🌐 DevTools接続確認中..."
 DEVTOOLS_READY=false
 for i in `$(seq 1 10); do
-    if curl -sf "http://127.0.0.1:\$DEVTOOLS_PORT/json/version" > /dev/null 2>&1; then
+    if curl -sf "http://127.0.0.1:`$DEVTOOLS_PORT/json/version" > /dev/null 2>&1; then
         DEVTOOLS_READY=true
-        echo "✅ DevTools接続OK (試行: \$i)"
+        echo "✅ DevTools接続OK (試行: `$i)"
         # バージョン情報表示
-        curl -s "http://127.0.0.1:\$DEVTOOLS_PORT/json/version" | grep -o '"Browser":"[^"]*"' || true
+        curl -s "http://127.0.0.1:`$DEVTOOLS_PORT/json/version" | grep -o '"Browser":"[^"]*"' || true
         break
     fi
-    echo "  ... DevTools待機中 (\$i/10)"
+    echo "  ... DevTools待機中 (`$i/10)"
     sleep 2
 done
 
-if [ "\$DEVTOOLS_READY" = "false" ]; then
-    echo "⚠️  DevToolsへの接続を確認できませんでした (ポート: \$DEVTOOLS_PORT)"
+if [ "`$DEVTOOLS_READY" = "false" ]; then
+    echo "⚠️  DevToolsへの接続を確認できませんでした (ポート: `$DEVTOOLS_PORT)"
     echo "   ブラウザが起動しているか確認してください"
 fi
 
@@ -258,11 +258,20 @@ $tmuxSection
 # --- Claude Code 起動ループ ---
 echo "🤖 Claude Code を起動します..."
 while true; do
-    claude --dangerously-skip-permissions -p "\$INIT_PROMPT" || true
+    if [ -n "`$INIT_PROMPT" ]; then
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "📋 初期プロンプト指示内容:"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "`$INIT_PROMPT"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        claude --dangerously-skip-permissions -p "`$INIT_PROMPT" || true
+    else
+        claude --dangerously-skip-permissions || true
+    fi
     echo ""
     echo "🔄 Claude Code が終了しました。再起動しますか？ [Y/n]"
     read -r RESTART_ANSWER
-    if [[ "\$RESTART_ANSWER" =~ ^[Nn] ]]; then
+    if [[ "`$RESTART_ANSWER" =~ ^[Nn] ]]; then
         echo "👋 終了します"
         break
     fi

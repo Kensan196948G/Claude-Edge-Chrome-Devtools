@@ -301,4 +301,68 @@ Describe 'New-RunClaudeScript' {
             $result | Should -Not -BeNullOrEmpty
         }
     }
+
+    Context 'bash変数エスケープの正確性' {
+
+        It '生成スクリプトに $DEVTOOLS_PORT がリテラルとして含まれること' {
+            $result = New-RunClaudeScript -Params $script:ValidParams
+            $result | Should -Match '\$DEVTOOLS_PORT'
+        }
+
+        It '生成スクリプトに $PROJECT_ROOT がリテラルとして含まれること' {
+            $result = New-RunClaudeScript -Params $script:ValidParams
+            $result | Should -Match '\$PROJECT_ROOT'
+        }
+
+        It '生成スクリプトに $INIT_PROMPT がリテラルとして含まれること' {
+            $result = New-RunClaudeScript -Params $script:ValidParams
+            $result | Should -Match '\$INIT_PROMPT'
+        }
+
+        It '生成スクリプトに $DEVTOOLS_READY がリテラルとして含まれること' {
+            $result = New-RunClaudeScript -Params $script:ValidParams
+            $result | Should -Match '\$DEVTOOLS_READY'
+        }
+
+        It '生成スクリプトに $RESTART_ANSWER がリテラルとして含まれること' {
+            $result = New-RunClaudeScript -Params $script:ValidParams
+            $result | Should -Match '\$RESTART_ANSWER'
+        }
+
+        It 'バックスラッシュ+ドルがリテラルとして出力されないこと (エスケープ誤り検出)' {
+            $result = New-RunClaudeScript -Params $script:ValidParams
+            # \$VARIABLE (バックスラッシュ直後にドル) はPowerShellのエスケープ誤り
+            # cd "\" のようなパターンが出力されていないことを確認
+            $result | Should -Not -Match 'cd "\\"'
+            $result | Should -Not -Match 'export CLAUDE_CHROME_DEBUG_PORT="\\"'
+        }
+    }
+
+    Context 'リスタートループの条件分岐' {
+
+        It 'INIT_PROMPT が非空の場合に -p フラグ付きで起動する条件が含まれること' {
+            $result = New-RunClaudeScript -Params $script:ValidParams
+            $result | Should -Match 'if \[ -n "\$INIT_PROMPT" \]'
+        }
+
+        It 'INIT_PROMPT が空の場合に -p フラグなしで起動するelse節が含まれること' {
+            $result = New-RunClaudeScript -Params $script:ValidParams
+            $result | Should -Match 'claude --dangerously-skip-permissions \|\| true'
+        }
+
+        It '-p "$INIT_PROMPT" 付きの起動コマンドが含まれること' {
+            $result = New-RunClaudeScript -Params $script:ValidParams
+            $result | Should -Match 'claude --dangerously-skip-permissions -p "\$INIT_PROMPT"'
+        }
+
+        It 'INIT_PROMPT 表示用の echo 文が含まれること' {
+            $result = New-RunClaudeScript -Params $script:ValidParams
+            $result | Should -Match 'echo "\$INIT_PROMPT"'
+        }
+
+        It 'プロンプト表示の区切り線が含まれること' {
+            $result = New-RunClaudeScript -Params $script:ValidParams
+            $result | Should -Match '📋 初期プロンプト指示内容'
+        }
+    }
 }
