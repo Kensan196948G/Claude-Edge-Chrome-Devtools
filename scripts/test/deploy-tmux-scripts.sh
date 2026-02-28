@@ -32,6 +32,8 @@ echo ""
 # リモートディレクトリ作成
 # -----------------------------------------------------------------
 echo ">> リモートディレクトリを作成しています..."
+# REMOTE_BASE is intentionally expanded client-side
+# shellcheck disable=SC2029
 ssh "${LINUX_HOST}" "mkdir -p \
     '${REMOTE_BASE}/scripts/tmux' \
     '${REMOTE_BASE}/scripts/tmux/panes' \
@@ -49,6 +51,8 @@ transfer_file() {
     local filename
     filename="$(basename "${local_path}")"
 
+    # remote_path is intentionally expanded client-side
+    # shellcheck disable=SC2029
     if base64 < "${local_path}" | ssh "${LINUX_HOST}" "base64 -d > '${remote_path}'"; then
         echo "  OK ${filename}"
         SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
@@ -93,6 +97,8 @@ echo ""
 # 実行権限付与 (.sh のみ)
 # -----------------------------------------------------------------
 echo ">> 実行権限を付与しています (.sh のみ)..."
+# REMOTE_BASE is intentionally expanded client-side
+# shellcheck disable=SC2029
 ssh "${LINUX_HOST}" "
     find '${REMOTE_BASE}/scripts/tmux' -name '*.sh' -exec chmod +x {} \;
 " && echo "   OK" || echo "   WARN: chmod に失敗しました"

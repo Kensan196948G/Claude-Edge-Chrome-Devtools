@@ -45,17 +45,17 @@ function Select-Browser {
     Write-Host ""
 
     while ($true) {
-        $input = Read-Host "番号を入力 [デフォルト: $defaultNum ($($browsers[$defaultNum].Name))]"
+        $userInput = Read-Host "番号を入力 [デフォルト: $defaultNum ($($browsers[$defaultNum].Name))]"
 
         # 空入力はデフォルト使用
-        if ([string]::IsNullOrWhiteSpace($input)) {
-            $input = $defaultNum
+        if ([string]::IsNullOrWhiteSpace($userInput)) {
+            $userInput = $defaultNum
         }
 
-        $input = $input.Trim()
+        $userInput = $userInput.Trim()
 
-        if ($browsers.ContainsKey($input)) {
-            $selected = $browsers[$input]
+        if ($browsers.ContainsKey($userInput)) {
+            $selected = $browsers[$userInput]
             Write-Host "✅ 選択: $($selected.Name)" -ForegroundColor Green
             return $selected
         }
@@ -147,15 +147,15 @@ function Select-Project {
     Write-Host ""
 
     while ($true) {
-        $input = Read-Host "番号を入力 (1-$($indexedDirs.Count))"
+        $userInput = Read-Host "番号を入力 (1-$($indexedDirs.Count))"
 
-        if ([string]::IsNullOrWhiteSpace($input)) {
+        if ([string]::IsNullOrWhiteSpace($userInput)) {
             Write-Host "⚠️  番号を入力してください。" -ForegroundColor Yellow
             continue
         }
 
         $num = 0
-        if ([int]::TryParse($input.Trim(), [ref]$num) -and $num -ge 1 -and $num -le $indexedDirs.Count) {
+        if ([int]::TryParse($userInput.Trim(), [ref]$num) -and $num -ge 1 -and $num -le $indexedDirs.Count) {
             $selected = $indexedDirs[$num - 1]
             Write-Host "✅ 選択: $($selected.Name)" -ForegroundColor Green
             return $selected

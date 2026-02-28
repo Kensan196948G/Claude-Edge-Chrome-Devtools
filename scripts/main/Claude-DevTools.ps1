@@ -541,6 +541,9 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 $SetupScript = $SetupScript -replace "`r`n", "`n" -replace "`r", "`n"
 $encodedSetup = ConvertTo-Base64Utf8 -Content $SetupScript
 $setupResult = ssh $LinuxHost "echo '$encodedSetup' | base64 -d > /tmp/remote_setup.sh && chmod +x /tmp/remote_setup.sh && /tmp/remote_setup.sh && rm /tmp/remote_setup.sh"
+if ($LASTEXITCODE -ne 0) {
+    throw "リモートセットアップが失敗しました (exit code: $LASTEXITCODE)"
+}
 Write-Host $setupResult
 
 if ($statuslineEnabled) {

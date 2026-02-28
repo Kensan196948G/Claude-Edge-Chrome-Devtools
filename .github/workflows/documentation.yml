@@ -38,8 +38,12 @@ jobs:
             !docs/MCP-AutoSetup.md
             !docs/NetworkDrive-PermanentSolution.md
             !docs/v1.2.0-実装完了レポート.md
+            !docs/v1.3.0-実装完了レポート.md
             !docs/モジュール化設計*
             !docs/改善提案*
+            !docs/plans/*
+            !docs/templates/*
+            !MIGRATION.md
 
   link-check:
     name: Check Broken Links
