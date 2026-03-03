@@ -314,6 +314,19 @@ function Update-RecentProjects {
     }
 }
 
+<#
+.SYNOPSIS
+    MCP サーバーの可用性を検証
+.DESCRIPTION
+    config.json の mcp.requiredServers と .mcp.json を比較し、
+    不足しているサーバーやトークン形式の問題を報告する。
+.PARAMETER Config
+    config.json から読み込んだ設定オブジェクト
+.PARAMETER ProjectRoot
+    プロジェクトルートディレクトリ (.mcp.json の存在場所)
+.EXAMPLE
+    $result = Test-McpServerAvailability -Config $Config -ProjectRoot "X:\MyProject"
+#>
 function Test-McpServerAvailability {
     [CmdletBinding()]
     param(
