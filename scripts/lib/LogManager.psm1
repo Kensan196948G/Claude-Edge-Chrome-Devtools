@@ -3,6 +3,10 @@
 # Claude-EdgeChromeDevTools v1.8.0
 # ============================================================
 
+# --- モジュールスコープ変数 ---
+$script:CurrentLogPath = $null
+$script:LoggingActive = $false
+
 function Start-SessionLog {
     [CmdletBinding()]
     param(
@@ -18,7 +22,49 @@ function Start-SessionLog {
         [Parameter(Mandatory=$true)]
         [int]$Port
     )
-    throw "Not implemented"
+
+    # logging セクション未定義 or disabled の場合はスキップ
+    if (-not $Config.PSObject.Properties['logging'] -or -not $Config.logging.enabled) {
+        $script:LoggingActive = $false
+        return @{ LogPath = $null }
+    }
+
+    $logging = $Config.logging
+    $prefix = if ($logging.logPrefix) { $logging.logPrefix } else { "claude-devtools" }
+    $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+    $fileName = "$prefix-$ProjectName-$Browser-$Port-$timestamp.log"
+
+    # ログディレクトリの決定（フォールバック付き）
+    $logDir = $logging.logDir
+    try {
+        if (-not (Test-Path $logDir)) {
+            New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+        }
+        # 書き込みテスト
+        $testFile = Join-Path $logDir ".write-test-$(Get-Date -Format 'yyyyMMddHHmmss')"
+        [System.IO.File]::WriteAllText($testFile, "test")
+        Remove-Item $testFile -Force
+    }
+    catch {
+        Write-Warning "ログディレクトリにアクセスできません: $logDir → `$env:TEMP にフォールバック"
+        $logDir = $env:TEMP
+    }
+
+    $logPath = Join-Path $logDir $fileName
+
+    # Start-Transcript ラッパー
+    try {
+        Start-Transcript -Path $logPath -Append -ErrorAction Stop | Out-Null
+        $script:CurrentLogPath = $logPath
+        $script:LoggingActive = $true
+    }
+    catch {
+        Write-Warning "Start-Transcript 失敗: $_"
+        $script:LoggingActive = $false
+        return @{ LogPath = $null }
+    }
+
+    return @{ LogPath = $logPath }
 }
 
 function Stop-SessionLog {

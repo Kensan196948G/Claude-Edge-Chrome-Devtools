@@ -9,6 +9,12 @@ BeforeAll {
 
 Describe 'Start-SessionLog' {
 
+    BeforeEach {
+        # Start-Transcript をモックしてファイルロック問題を回避
+        Mock Start-Transcript {} -ModuleName LogManager
+        Mock Stop-Transcript {} -ModuleName LogManager
+    }
+
     Context '正常系: logging.enabled = true の場合' {
 
         BeforeAll {
@@ -57,17 +63,20 @@ Describe 'Start-SessionLog' {
     Context 'フォールバック: logDir にアクセスできない場合' {
 
         It '$env:TEMP にフォールバックすること' {
+            # 書き込みテストが失敗するようにNew-Itemをモック（ディレクトリ作成は成功するが書き込みテストで例外）
+            $badPath = "\\?\INVALID_UNC_PATH_$([guid]::NewGuid())"
             $badConfig = [pscustomobject]@{
                 logging = [pscustomobject]@{
                     enabled   = $true
-                    logDir    = 'Z:\nonexistent\impossible\path'
+                    logDir    = $badPath
                     logPrefix = 'claude-devtools'
                     successKeepDays = 30; failureKeepDays = 90
                     archiveAfterDays = 30; legacyKeepDays = 7
                 }
             }
             $result = Start-SessionLog -Config $badConfig -ProjectName 'P' -Browser 'edge' -Port 9222
-            $result.LogPath | Should -Match [regex]::Escape($env:TEMP)
+            $escapedTemp = [regex]::Escape($env:TEMP)
+            $result.LogPath | Should -Match $escapedTemp
         }
     }
 
