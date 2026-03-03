@@ -157,7 +157,7 @@ function New-RunClaudeScript {
     if ([string]::IsNullOrWhiteSpace($initPrompt)) {
         $scriptDir = Split-Path -Parent $PSScriptRoot
         $templateName = if ($language -eq 'en') { 'init-prompt-en.txt' } else { 'init-prompt-ja.txt' }
-        $autoTemplatePath = Join-Path $scriptDir "templates`$templateName"
+        $autoTemplatePath = Join-Path $scriptDir "templates" $templateName
         if (Test-Path $autoTemplatePath) {
             $initPrompt = Get-Content -Path $autoTemplatePath -Raw -Encoding UTF8
             Write-Host "📝 言語テンプレート自動選択: $templateName" -ForegroundColor Cyan

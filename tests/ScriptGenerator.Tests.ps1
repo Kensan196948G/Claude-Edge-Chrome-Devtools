@@ -267,7 +267,26 @@ Describe 'New-RunClaudeScript' {
 
     Context '言語テンプレート自動選択' {
 
+        BeforeAll {
+            # テンプレートファイルの実パスを取得してユニークな文字列を読み込む
+            $script:TemplatesDir = Join-Path (Split-Path -Parent $PSScriptRoot) 'scripts\templates'
+            $script:JaTemplatePath = Join-Path $script:TemplatesDir 'init-prompt-ja.txt'
+            $script:EnTemplatePath = Join-Path $script:TemplatesDir 'init-prompt-en.txt'
+
+            # テンプレートが存在する場合のみ固有文字列を取得
+            $script:JaUniqueText = if (Test-Path $script:JaTemplatePath) {
+                (Get-Content -Path $script:JaTemplatePath -Raw -Encoding UTF8).Split("`n")[0].Trim()
+            } else { $null }
+            $script:EnUniqueText = if (Test-Path $script:EnTemplatePath) {
+                (Get-Content -Path $script:EnTemplatePath -Raw -Encoding UTF8).Split("`n")[0].Trim()
+            } else { $null }
+        }
+
         It 'Language=ja の場合は日本語テンプレートが自動選択されること' {
+            if (-not (Test-Path $script:JaTemplatePath)) {
+                Set-ItResult -Skipped -Because "init-prompt-ja.txt が存在しません"
+                return
+            }
             $params = @{
                 Port        = 9222
                 LinuxBase   = '/mnt/LinuxHDD'
@@ -277,9 +296,15 @@ Describe 'New-RunClaudeScript' {
             $result = New-RunClaudeScript -Params $params
             $result | Should -Not -BeNullOrEmpty
             $result | Should -Match '#!/bin/bash'
+            # テンプレートの先頭行が生成スクリプトに含まれることを確認
+            $result | Should -Match ([regex]::Escape($script:JaUniqueText))
         }
 
-        It 'Language=en の場合も正常に動作すること' {
+        It 'Language=en の場合は英語テンプレートが自動選択されること' {
+            if (-not (Test-Path $script:EnTemplatePath)) {
+                Set-ItResult -Skipped -Because "init-prompt-en.txt が存在しません"
+                return
+            }
             $params = @{
                 Port        = 9222
                 LinuxBase   = '/mnt/LinuxHDD'
@@ -289,9 +314,15 @@ Describe 'New-RunClaudeScript' {
             $result = New-RunClaudeScript -Params $params
             $result | Should -Not -BeNullOrEmpty
             $result | Should -Match '#!/bin/bash'
+            # 英語テンプレートの先頭行が生成スクリプトに含まれることを確認
+            $result | Should -Match ([regex]::Escape($script:EnUniqueText))
         }
 
         It 'Language 未指定時はデフォルト(ja)が使われること' {
+            if (-not (Test-Path $script:JaTemplatePath)) {
+                Set-ItResult -Skipped -Because "init-prompt-ja.txt が存在しません"
+                return
+            }
             $params = @{
                 Port        = 9222
                 LinuxBase   = '/mnt/LinuxHDD'
@@ -299,6 +330,21 @@ Describe 'New-RunClaudeScript' {
             }
             $result = New-RunClaudeScript -Params $params
             $result | Should -Not -BeNullOrEmpty
+            # Language未指定時はjaテンプレートが使われることを確認
+            $result | Should -Match ([regex]::Escape($script:JaUniqueText))
+        }
+
+        It 'ja テンプレートが en テンプレートと異なる内容で選択されること' {
+            if (-not (Test-Path $script:JaTemplatePath) -or -not (Test-Path $script:EnTemplatePath)) {
+                Set-ItResult -Skipped -Because "テンプレートファイルが存在しません"
+                return
+            }
+            $paramsJa = @{ Port = 9222; LinuxBase = '/mnt/LinuxHDD'; ProjectName = 'P'; Language = 'ja' }
+            $paramsEn = @{ Port = 9222; LinuxBase = '/mnt/LinuxHDD'; ProjectName = 'P'; Language = 'en' }
+            $resultJa = New-RunClaudeScript -Params $paramsJa
+            $resultEn = New-RunClaudeScript -Params $paramsEn
+            # 日本語テンプレートが英語スクリプトに含まれないことを確認
+            $resultEn | Should -Not -Match ([regex]::Escape($script:JaUniqueText))
         }
     }
 
