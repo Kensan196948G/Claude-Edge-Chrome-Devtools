@@ -155,6 +155,29 @@ Describe 'Get-ErrorCategory' {
             $result.ToString() | Should -Be 'CONFIG_MISMATCH'
         }
     }
+
+    Context '偽陽性防止 (ワードバウンダリ)' {
+
+        It '"login failed" は LOG_OPERATION ではなく UNKNOWN を返すこと' {
+            $result = Get-ErrorCategory -ErrorMessage 'login failed: invalid credentials'
+            $result.ToString() | Should -Not -Be 'LOG_OPERATION'
+        }
+
+        It '"dialog box appeared" は LOG_OPERATION ではなく UNKNOWN を返すこと' {
+            $result = Get-ErrorCategory -ErrorMessage 'unexpected dialog box appeared'
+            $result.ToString() | Should -Not -Be 'LOG_OPERATION'
+        }
+
+        It '"profile not found" は FILE_SYSTEM ではないこと' {
+            $result = Get-ErrorCategory -ErrorMessage 'browser profile not found'
+            $result.ToString() | Should -Not -Be 'FILE_SYSTEM'
+        }
+
+        It '"catalog parse error" は LOG_OPERATION ではないこと' {
+            $result = Get-ErrorCategory -ErrorMessage 'catalog parse error occurred'
+            $result.ToString() | Should -Not -Be 'LOG_OPERATION'
+        }
+    }
 }
 
 Describe 'Show-CategorizedError' {

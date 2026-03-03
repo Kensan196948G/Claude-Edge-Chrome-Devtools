@@ -262,22 +262,22 @@ function Get-ErrorCategory {
     elseif ($message -match "timeout|timed out|unreachable") {
         return [ErrorCategory]::NETWORK_TIMEOUT
     }
-    elseif ($message -match "file|directory|folder|write.*fail|read.*fail|path.*not") {
+    elseif ($message -match "\bfile\b|\bdirectory\b|\bfolder\b|write.*fail|read.*fail|\bpath\b.*not") {
         return [ErrorCategory]::FILE_SYSTEM
     }
-    elseif ($message -match "process|kill|stop-process|start-process|pid") {
+    elseif ($message -match "\bprocess\b|\bkill\b|stop-process|start-process|\bpid\b") {
         return [ErrorCategory]::PROCESS_MANAGEMENT
     }
     elseif ($message -match "mismatch|inconsistent|out of sync") {
         return [ErrorCategory]::CONFIG_MISMATCH
     }
-    elseif ($message -match "log|transcript|rotation|archive.*log") {
+    elseif ($message -match "\blog\b|\btranscript\b|\brotation\b|archive.*\blog\b") {
         return [ErrorCategory]::LOG_OPERATION
     }
     elseif ($message -match "run-claude|script.*gen|generate.*script") {
         return [ErrorCategory]::SCRIPT_GENERATION
     }
-    elseif ($message -match "tmux|session.*create|pane") {
+    elseif ($message -match "\btmux\b|tmux.*session.*create|\bpane\b") {
         return [ErrorCategory]::TMUX_SESSION
     }
     else {
