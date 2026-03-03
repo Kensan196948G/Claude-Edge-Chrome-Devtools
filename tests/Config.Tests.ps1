@@ -162,3 +162,119 @@ Describe 'Import-DevToolsConfig' {
         }
     }
 }
+
+Describe 'Test-McpServerAvailability' {
+
+    Context '全必須サーバーが .mcp.json に存在する場合' {
+
+        BeforeAll {
+            $script:McpDir = Join-Path $TestDrive 'mcp-test'
+            New-Item -ItemType Directory -Path $script:McpDir -Force | Out-Null
+
+            $mcpJson = @{
+                mcpServers = @{
+                    'brave-search' = @{ command = 'npx'; args = @() }
+                    'context7'     = @{ command = 'npx'; args = @() }
+                    'github'       = @{ command = 'npx'; args = @() }
+                    'memory'       = @{ command = 'npx'; args = @() }
+                    'playwright'   = @{ command = 'npx'; args = @() }
+                    'puppeteer'    = @{ command = 'node'; args = @() }
+                    'sequential-thinking' = @{ command = 'npx'; args = @() }
+                }
+            } | ConvertTo-Json -Depth 3
+            Set-Content -Path (Join-Path $script:McpDir '.mcp.json') -Value $mcpJson -Encoding UTF8
+
+            $script:McpConfig = [pscustomobject]@{
+                mcp = [pscustomobject]@{
+                    enabled = $true
+                    requiredServers = @('brave-search','context7','github','memory','playwright','puppeteer','sequential-thinking')
+                    optionalServers = @('codex')
+                    githubToken = 'ghp_xxxxxxxxxxxx'
+                    braveApiKey = ''
+                }
+            }
+        }
+
+        It 'Missing が空であること' {
+            $result = Test-McpServerAvailability -Config $script:McpConfig -ProjectRoot $script:McpDir
+            $result.Missing.Count | Should -Be 0
+        }
+
+        It 'Available に全必須サーバーが含まれること' {
+            $result = Test-McpServerAvailability -Config $script:McpConfig -ProjectRoot $script:McpDir
+            $result.Available.Count | Should -Be 7
+        }
+    }
+
+    Context '必須サーバーが一部欠落している場合' {
+
+        BeforeAll {
+            $script:McpDir2 = Join-Path $TestDrive 'mcp-test2'
+            New-Item -ItemType Directory -Path $script:McpDir2 -Force | Out-Null
+
+            $mcpJson = @{
+                mcpServers = @{
+                    'brave-search' = @{ command = 'npx'; args = @() }
+                    'context7'     = @{ command = 'npx'; args = @() }
+                }
+            } | ConvertTo-Json -Depth 3
+            Set-Content -Path (Join-Path $script:McpDir2 '.mcp.json') -Value $mcpJson -Encoding UTF8
+
+            $script:McpConfig2 = [pscustomobject]@{
+                mcp = [pscustomobject]@{
+                    enabled = $true
+                    requiredServers = @('brave-search','context7','github','memory','playwright','puppeteer','sequential-thinking')
+                    optionalServers = @('codex')
+                    githubToken = ''; braveApiKey = ''
+                }
+            }
+        }
+
+        It 'Missing に欠落サーバーが含まれること' {
+            $result = Test-McpServerAvailability -Config $script:McpConfig2 -ProjectRoot $script:McpDir2
+            $result.Missing.Count | Should -Be 5
+            $result.Missing | Should -Contain 'github'
+        }
+    }
+
+    Context 'トークン形式検証' {
+
+        BeforeAll {
+            $script:McpDir3 = Join-Path $TestDrive 'mcp-test3'
+            New-Item -ItemType Directory -Path $script:McpDir3 -Force | Out-Null
+            Set-Content -Path (Join-Path $script:McpDir3 '.mcp.json') -Value '{"mcpServers":{}}' -Encoding UTF8
+
+            $script:McpConfig3 = [pscustomobject]@{
+                mcp = [pscustomobject]@{
+                    enabled = $true
+                    requiredServers = @(); optionalServers = @()
+                    githubToken = 'invalid_token_format'
+                    braveApiKey = ''
+                }
+            }
+        }
+
+        It 'githubToken 形式不正で Warnings に含まれること' {
+            $result = Test-McpServerAvailability -Config $script:McpConfig3 -ProjectRoot $script:McpDir3
+            $result.Warnings.Count | Should -BeGreaterOrEqual 1
+            $result.Warnings[0] | Should -Match 'githubToken'
+        }
+    }
+
+    Context '.mcp.json が存在しない場合' {
+
+        It 'Missing に全必須サーバーが含まれること' {
+            $emptyDir = Join-Path $TestDrive 'no-mcp'
+            New-Item -ItemType Directory -Path $emptyDir -Force | Out-Null
+            $config = [pscustomobject]@{
+                mcp = [pscustomobject]@{
+                    enabled = $true
+                    requiredServers = @('brave-search','context7')
+                    optionalServers = @(); githubToken = ''; braveApiKey = ''
+                }
+            }
+            $result = Test-McpServerAvailability -Config $config -ProjectRoot $emptyDir
+            $result.Missing.Count | Should -Be 2
+        }
+    }
+}

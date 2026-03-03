@@ -314,10 +314,71 @@ function Update-RecentProjects {
     }
 }
 
+function Test-McpServerAvailability {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [psobject]$Config,
+
+        [Parameter(Mandatory=$true)]
+        [string]$ProjectRoot
+    )
+
+    $result = @{
+        Available = @()
+        Missing   = @()
+        Warnings  = @()
+    }
+
+    if ($null -eq $Config.mcp -or $Config.mcp.enabled -ne $true) {
+        return $result
+    }
+
+    $mcpConfig = $Config.mcp
+    $mcpJsonPath = Join-Path $ProjectRoot '.mcp.json'
+
+    # .mcp.json 読み込み
+    $mcpServers = @{}
+    if (Test-Path $mcpJsonPath) {
+        try {
+            $mcpContent = Get-Content -Path $mcpJsonPath -Raw -Encoding UTF8 | ConvertFrom-Json
+            if ($null -ne $mcpContent.mcpServers) {
+                foreach ($prop in $mcpContent.mcpServers.PSObject.Properties) {
+                    $mcpServers[$prop.Name] = $true
+                }
+            }
+        } catch {
+            $result.Warnings += ".mcp.json のパースに失敗しました: $_"
+        }
+    }
+
+    # 必須サーバー検証
+    if ($null -ne $mcpConfig.requiredServers) {
+        foreach ($server in $mcpConfig.requiredServers) {
+            if ($mcpServers.ContainsKey($server)) {
+                $result.Available += $server
+            } else {
+                $result.Missing += $server
+            }
+        }
+    }
+
+    # トークン形式検証
+    if ($null -ne $mcpConfig.githubToken -and $mcpConfig.githubToken -ne '') {
+        $token = $mcpConfig.githubToken
+        if ($token -notmatch '^(ghp_|github_pat_)') {
+            $result.Warnings += "githubToken の形式が不正です (ghp_ または github_pat_ プレフィックスが必要)"
+        }
+    }
+
+    return $result
+}
+
 # モジュールのエクスポート
 Export-ModuleMember -Function @(
     'Import-DevToolsConfig',
     'Backup-ConfigFile',
     'Get-RecentProjects',
-    'Update-RecentProjects'
+    'Update-RecentProjects',
+    'Test-McpServerAvailability'
 )
