@@ -307,3 +307,60 @@ Describe 'Invoke-LogArchive' {
         }
     }
 }
+
+Describe 'Get-LogSummary' {
+
+    Context 'ログファイルが存在する場合' {
+
+        BeforeAll {
+            $script:SumDir = Join-Path $TestDrive 'summary'
+            New-Item -ItemType Directory -Path $script:SumDir -Force | Out-Null
+
+            Set-Content -Path (Join-Path $script:SumDir 'claude-devtools-P-edge-9222-20260301-120000-SUCCESS.log') -Value ('x' * 100)
+            Set-Content -Path (Join-Path $script:SumDir 'claude-devtools-P-edge-9222-20260302-120000-FAILURE.log') -Value ('y' * 200)
+
+            $script:SumConfig = [pscustomobject]@{
+                logging = [pscustomobject]@{
+                    enabled = $true; logDir = $script:SumDir; logPrefix = 'claude-devtools'
+                    successKeepDays = 30; failureKeepDays = 90
+                    archiveAfterDays = 30; legacyKeepDays = 7
+                }
+            }
+        }
+
+        It 'TotalFiles が正しいこと' {
+            $result = Get-LogSummary -Config $script:SumConfig
+            $result.TotalFiles | Should -Be 2
+        }
+
+        It 'SuccessCount が正しいこと' {
+            $result = Get-LogSummary -Config $script:SumConfig
+            $result.SuccessCount | Should -Be 1
+        }
+
+        It 'FailureCount が正しいこと' {
+            $result = Get-LogSummary -Config $script:SumConfig
+            $result.FailureCount | Should -Be 1
+        }
+
+        It 'TotalSizeBytes が 0 より大きいこと' {
+            $result = Get-LogSummary -Config $script:SumConfig
+            $result.TotalSizeBytes | Should -BeGreaterThan 0
+        }
+    }
+
+    Context 'ログファイルが存在しない場合' {
+
+        It 'TotalFiles が 0 であること' {
+            $emptyConfig = [pscustomobject]@{
+                logging = [pscustomobject]@{
+                    enabled = $true; logDir = (Join-Path $TestDrive 'empty-dir'); logPrefix = 'claude-devtools'
+                    successKeepDays = 30; failureKeepDays = 90
+                    archiveAfterDays = 30; legacyKeepDays = 7
+                }
+            }
+            $result = Get-LogSummary -Config $emptyConfig
+            $result.TotalFiles | Should -Be 0
+        }
+    }
+}

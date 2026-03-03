@@ -210,7 +210,41 @@ function Get-LogSummary {
         [Parameter(Mandatory=$true)]
         [psobject]$Config
     )
-    throw "Not implemented"
+
+    $result = @{
+        TotalFiles     = 0
+        SuccessCount   = 0
+        FailureCount   = 0
+        LegacyCount    = 0
+        TotalSizeBytes = 0
+        OldestLog      = $null
+        NewestLog      = $null
+    }
+
+    if ($null -eq $Config.logging) { return $result }
+
+    $logDir = $Config.logging.logDir
+    if (-not $logDir -or -not (Test-Path $logDir)) { return $result }
+
+    $prefix = if ($Config.logging.logPrefix) { $Config.logging.logPrefix } else { 'claude-devtools' }
+    $files = Get-ChildItem -Path $logDir -Filter "${prefix}-*.log" -File
+
+    if ($files.Count -eq 0) { return $result }
+
+    $result.TotalFiles = $files.Count
+    $result.TotalSizeBytes = ($files | Measure-Object -Property Length -Sum).Sum
+
+    foreach ($f in $files) {
+        if ($f.Name -match '-SUCCESS\.log$') { $result.SuccessCount++ }
+        elseif ($f.Name -match '-FAILURE\.log$') { $result.FailureCount++ }
+        else { $result.LegacyCount++ }
+    }
+
+    $sorted = $files | Sort-Object LastWriteTime
+    $result.OldestLog = $sorted[0].Name
+    $result.NewestLog = $sorted[-1].Name
+
+    return $result
 }
 
 Export-ModuleMember -Function @(
