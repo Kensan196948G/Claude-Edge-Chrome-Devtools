@@ -292,7 +292,8 @@ while true; do
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         claude --dangerously-skip-permissions "`$INIT_PROMPT" || true
     else
-        claude --dangerously-skip-permissions || true
+        # 対話モード: exec tee によるstdoutリダイレクト迂回のため /dev/tty を使用
+        claude --dangerously-skip-permissions </dev/tty >/dev/tty 2>&1 || true
     fi
     echo ""
     echo "🔄 Claude Code が終了しました。再起動モードを選択してください:"

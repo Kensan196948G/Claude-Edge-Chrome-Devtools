@@ -391,9 +391,10 @@ Describe 'New-RunClaudeScript' {
             $result | Should -Match 'if \[ -n "\$INIT_PROMPT" \]'
         }
 
-        It 'INIT_PROMPT が空の場合にプロンプトなしで起動するelse節が含まれること' {
+        It 'INIT_PROMPT が空の場合に /dev/tty リダイレクト付きで起動するelse節が含まれること' {
             $result = New-RunClaudeScript -Params $script:ValidParams
-            $result | Should -Match 'claude --dangerously-skip-permissions \|\| true'
+            # exec tee によるstdoutリダイレクト迂回のため /dev/tty を使用する
+            $result | Should -Match 'claude --dangerously-skip-permissions </dev/tty >/dev/tty 2>&1 \|\| true'
         }
 
         It 'INIT_PROMPT 付きの対話モード起動コマンドが含まれること（-p フラグなし）' {
