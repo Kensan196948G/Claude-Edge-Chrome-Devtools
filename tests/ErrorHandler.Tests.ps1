@@ -102,9 +102,57 @@ Describe 'Get-ErrorCategory' {
 
     Context '不明なエラーメッセージ' {
 
-        It '不明なキーワードで CONFIG_INVALID カテゴリ（デフォルト）を返すこと' {
+        It '不明なキーワードで UNKNOWN カテゴリ（デフォルト）を返すこと' {
             $result = Get-ErrorCategory -ErrorMessage '原因不明のエラーです'
-            $result.ToString() | Should -Be 'CONFIG_INVALID'
+            $result.ToString() | Should -Be 'UNKNOWN'
+        }
+    }
+
+    Context 'ファイルシステムエラー' {
+
+        It 'file/directory キーワードから FILE_SYSTEM カテゴリを返すこと' {
+            $result = Get-ErrorCategory -ErrorMessage 'ファイルの書き込みに失敗 file write error'
+            $result.ToString() | Should -Be 'FILE_SYSTEM'
+        }
+    }
+
+    Context 'プロセス管理エラー' {
+
+        It 'process/kill キーワードから PROCESS_MANAGEMENT カテゴリを返すこと' {
+            $result = Get-ErrorCategory -ErrorMessage 'process failed to start'
+            $result.ToString() | Should -Be 'PROCESS_MANAGEMENT'
+        }
+    }
+
+    Context 'ログ操作エラー' {
+
+        It 'log/transcript キーワードから LOG_OPERATION カテゴリを返すこと' {
+            $result = Get-ErrorCategory -ErrorMessage 'Start-Transcript log operation failed'
+            $result.ToString() | Should -Be 'LOG_OPERATION'
+        }
+    }
+
+    Context 'スクリプト生成エラー' {
+
+        It 'run-claude/script gen キーワードから SCRIPT_GENERATION カテゴリを返すこと' {
+            $result = Get-ErrorCategory -ErrorMessage 'run-claude.sh generation failed'
+            $result.ToString() | Should -Be 'SCRIPT_GENERATION'
+        }
+    }
+
+    Context 'tmux エラー' {
+
+        It 'tmux キーワードから TMUX_SESSION カテゴリを返すこと' {
+            $result = Get-ErrorCategory -ErrorMessage 'tmux session creation failed'
+            $result.ToString() | Should -Be 'TMUX_SESSION'
+        }
+    }
+
+    Context 'config mismatch エラー' {
+
+        It 'mismatch/inconsistent キーワードから CONFIG_MISMATCH カテゴリを返すこと' {
+            $result = Get-ErrorCategory -ErrorMessage 'config mismatch detected'
+            $result.ToString() | Should -Be 'CONFIG_MISMATCH'
         }
     }
 }

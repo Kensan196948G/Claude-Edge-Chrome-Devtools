@@ -14,6 +14,13 @@ enum ErrorCategory {
     DRIVE_ACCESS            # ドライブアクセスエラー
     PERMISSION_DENIED       # 権限エラー
     NETWORK_TIMEOUT         # ネットワークタイムアウト
+    FILE_SYSTEM             # ファイル/ディレクトリ操作エラー
+    PROCESS_MANAGEMENT      # プロセス起動/終了エラー
+    CONFIG_MISMATCH         # config.json と実態の不整合
+    LOG_OPERATION           # ログ書き込み/ローテーションエラー
+    SCRIPT_GENERATION       # run-claude.sh 生成エラー
+    TMUX_SESSION            # tmux セッション操作エラー
+    UNKNOWN                 # 未分類エラー
 }
 
 # カテゴリごとの絵文字
@@ -28,6 +35,13 @@ $script:CategoryEmoji = @{
     DRIVE_ACCESS = "💾"
     PERMISSION_DENIED = "🚫"
     NETWORK_TIMEOUT = "⏱️"
+    FILE_SYSTEM = "📄"
+    PROCESS_MANAGEMENT = "⚡"
+    CONFIG_MISMATCH = "🔀"
+    LOG_OPERATION = "📝"
+    SCRIPT_GENERATION = "🔧"
+    TMUX_SESSION = "🖥️"
+    UNKNOWN = "❓"
 }
 
 # カテゴリごとの推奨アクション
@@ -83,6 +97,41 @@ $script:CategorySolutions = @{
         "1. ネットワーク接続を確認: ping <hostname>",
         "2. ファイアウォール設定を確認（ポート 22, 9222-9229）",
         "3. タイムアウト値を増やす: ConnectTimeout=10"
+    )
+    FILE_SYSTEM = @(
+        "1. ファイル/ディレクトリの存在を確認",
+        "2. ディスク容量を確認: Get-PSDrive",
+        "3. ファイルがロックされていないか確認"
+    )
+    PROCESS_MANAGEMENT = @(
+        "1. プロセスの状態を確認: Get-Process",
+        "2. 管理者権限で実行してください",
+        "3. タスクマネージャーで手動終了を試行"
+    )
+    CONFIG_MISMATCH = @(
+        "1. config.json の設定値と実際の環境を比較",
+        "2. config.json を最新テンプレートと照合",
+        "3. 設定を再生成: config.json.template を参照"
+    )
+    LOG_OPERATION = @(
+        "1. ログディレクトリの書き込み権限を確認",
+        "2. ディスク容量を確認",
+        "3. logging.enabled = false で一時的にログを無効化"
+    )
+    SCRIPT_GENERATION = @(
+        "1. ScriptGenerator.psm1 が正しく読み込まれているか確認",
+        "2. 必須パラメータ (Port, LinuxBase, ProjectName) を確認",
+        "3. テンプレートファイルの存在を確認"
+    )
+    TMUX_SESSION = @(
+        "1. tmux がインストールされているか確認: tmux -V",
+        "2. 既存セッションを確認: tmux ls",
+        "3. tmux を無効化: config.json の tmux.enabled = false"
+    )
+    UNKNOWN = @(
+        "1. エラーメッセージの詳細を確認",
+        "2. ログファイルを確認",
+        "3. 問題が再現するか確認してください"
     )
 }
 
@@ -213,9 +262,26 @@ function Get-ErrorCategory {
     elseif ($message -match "timeout|timed out|unreachable") {
         return [ErrorCategory]::NETWORK_TIMEOUT
     }
+    elseif ($message -match "file|directory|folder|write.*fail|read.*fail|path.*not") {
+        return [ErrorCategory]::FILE_SYSTEM
+    }
+    elseif ($message -match "process|kill|stop-process|start-process|pid") {
+        return [ErrorCategory]::PROCESS_MANAGEMENT
+    }
+    elseif ($message -match "mismatch|inconsistent|out of sync") {
+        return [ErrorCategory]::CONFIG_MISMATCH
+    }
+    elseif ($message -match "log|transcript|rotation|archive.*log") {
+        return [ErrorCategory]::LOG_OPERATION
+    }
+    elseif ($message -match "run-claude|script.*gen|generate.*script") {
+        return [ErrorCategory]::SCRIPT_GENERATION
+    }
+    elseif ($message -match "tmux|session.*create|pane") {
+        return [ErrorCategory]::TMUX_SESSION
+    }
     else {
-        # デフォルトは CONFIG_INVALID
-        return [ErrorCategory]::CONFIG_INVALID
+        return [ErrorCategory]::UNKNOWN
     }
 }
 
