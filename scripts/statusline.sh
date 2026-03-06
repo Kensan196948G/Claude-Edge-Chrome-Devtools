@@ -1,126 +1,137 @@
 #!/usr/bin/env bash
+# Claude Code Statusline v2
+# Format:
+#   🤖 Opus 4.6 │ 📊 25% │ ✏️  +5/-1 │ 🔀 main
+#   ⏱ 5h  ▰▰▰▱▱▱▱▱▱▱  28%  Resets 9pm (Asia/Tokyo)
+#   📅 7d  ▰▰▰▰▰▰▱▱▱▱  59%  Resets Mar 6 at 1pm (Asia/Tokyo)
 set -euo pipefail
 
+# === 入力受付 ===
 input="$(cat)"
-
-# 入力が空の場合はデフォルトJSONを使用
 if [ -z "$input" ]; then
-  input='{
-    "model": {"display_name": "Unknown"},
-    "workspace": {"current_dir": "'$(pwd)'"},
-    "session": {"id": "-"},
-    "context_window": {
-      "used_percentage": 0,
-      "remaining_percentage": 100,
-      "auto_compact_remaining_tokens": null
-    },
-    "metrics": {"total_api_duration_ms": null},
-    "transcript_path": null
-  }'
+    input="{\"model\":{\"display_name\":\"Unknown\"},\"workspace\":{\"current_dir\":\"$(pwd)\"},\"context_window\":{\"used_percentage\":0},\"session\":{}}"
 fi
 
-# ===== 共通パース =====
-MODEL=$(echo "$input" | jq -r '.model.display_name // "Unknown"')
-DIR=$(echo  "$input" | jq -r '.workspace.current_dir // "."')
-DIR=${DIR:-.}
-PROJECT=${DIR##*/}
+# === Line 1 パース ===
+MODEL_FULL=$(echo "$input" | jq -r '.model.display_name // "Unknown"')
+MODEL_SHORT="${MODEL_FULL#Claude }"  # "Claude Opus 4.6" → "Opus 4.6"
 
-SESSION_ID=$(echo "$input" | jq -r '.session.id // "-"')
+USED_PCT=$(echo "$input" | jq -r '.context_window.used_percentage // 0')
+USED_PCT=$(printf '%.0f' "${USED_PCT:-0}" 2>/dev/null || echo 0)
 
-OS_NAME=$(uname -s 2>/dev/null || echo "Unknown")
-ENV_TAG="Linux"
-case "$OS_NAME" in
-  *[Ww][Ii][Nn]*) ENV_TAG="Windows" ;;
-  *[Dd]arwin*)    ENV_TAG="macOS"   ;;
-esac
+LINES_ADDED=$(echo "$input" | jq -r '.session.lines_added // 0')
+LINES_REMOVED=$(echo "$input" | jq -r '.session.lines_removed // 0')
 
-# Git 情報（ブランチ or HEAD 短縮コミット）
-GIT_SEG=""
-if git -C "$DIR" rev-parse --git-dir > /dev/null 2>&1; then
-  BRANCH=$(git -C "$DIR" branch --show-current 2>/dev/null || true)
-  if [ -n "$BRANCH" ]; then
-    GIT_SEG=" 🌿 $BRANCH"
-  else
-    SHORT_HEAD=$(git -C "$DIR" rev-parse --short HEAD 2>/dev/null || true)
-    [ -n "$SHORT_HEAD" ] && GIT_SEG=" 🌿 $SHORT_HEAD"
-  fi
+DIR=$(echo "$input" | jq -r '.workspace.current_dir // "."')
+DIR="${DIR:-.}"
+
+# Git ブランチ
+GIT_BRANCH=""
+if git -C "$DIR" rev-parse --git-dir >/dev/null 2>&1; then
+    GIT_BRANCH=$(git -C "$DIR" branch --show-current 2>/dev/null || true)
+    if [ -z "$GIT_BRANCH" ]; then
+        GIT_BRANCH=$(git -C "$DIR" rev-parse --short HEAD 2>/dev/null || true)
+    fi
+fi
+BRANCH_SEG=""
+[ -n "$GIT_BRANCH" ] && BRANCH_SEG=" │ 🔀 $GIT_BRANCH"
+
+# === Line 1 出力 ===
+echo "🤖 ${MODEL_SHORT} │ 📊 ${USED_PCT}% │ ✏️  +${LINES_ADDED}/-${LINES_REMOVED}${BRANCH_SEG}"
+
+# === ユーティリティ関数 ===
+
+# 10段階プログレスバー (▰=使用済み ▱=残り)
+make_bar() {
+    local pct="${1:-0}"
+    local filled=$(( pct * 10 / 100 ))
+    local bar="" i=0
+    while [ $i -lt $filled ]; do bar="${bar}▰"; ((i++)) || true; done
+    while [ $i -lt 10 ];     do bar="${bar}▱"; ((i++)) || true; done
+    echo "$bar"
+}
+
+# リセット時刻フォーマット: ISO8601 → "Resets 9pm (Asia/Tokyo)" / "Resets Mar 6 at 1pm (Asia/Tokyo)"
+format_reset() {
+    local reset_utc="$1"
+    [ -z "$reset_utc" ] && { echo "Resets ? (Asia/Tokyo)"; return; }
+
+    local now_day reset_day
+    now_day=$(TZ=Asia/Tokyo date +"%Y-%m-%d" 2>/dev/null) || { echo "Resets ? (Asia/Tokyo)"; return; }
+    reset_day=$(TZ=Asia/Tokyo date -d "$reset_utc" +"%Y-%m-%d" 2>/dev/null) || { echo "Resets ? (Asia/Tokyo)"; return; }
+
+    local hour_str
+    if [ "$now_day" = "$reset_day" ]; then
+        hour_str=$(TZ=Asia/Tokyo date -d "$reset_utc" +"%-I%p" 2>/dev/null | tr '[:upper:]' '[:lower:]')
+        echo "Resets ${hour_str} (Asia/Tokyo)"
+    else
+        local month_day
+        month_day=$(TZ=Asia/Tokyo date -d "$reset_utc" +"%b %-d at %-I%p" 2>/dev/null | tr '[:upper:]' '[:lower:]')
+        # 先頭文字だけ大文字: "mar 6 at 1pm" → "Mar 6 at 1pm"
+        echo "Resets $(echo "${month_day:0:1}" | tr '[:lower:]' '[:upper:]')${month_day:1} (Asia/Tokyo)"
+    fi
+}
+
+# === Haiku Probe (レート制限取得) ===
+CACHE_FILE="/tmp/.claude-statusline-cache"
+CACHE_TTL=360  # 6分
+
+RATE_HEADERS=""
+
+if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+    : # APIキー未設定 → Line 2/3 をスキップ
+elif [ -f "$CACHE_FILE" ]; then
+    cache_mtime=$(stat -c %Y "$CACHE_FILE" 2>/dev/null || echo 0)
+    cache_age=$(( $(date +%s) - cache_mtime ))
+    if [ "$cache_age" -lt "$CACHE_TTL" ]; then
+        RATE_HEADERS=$(cat "$CACHE_FILE")
+    fi
 fi
 
-# ===== コンテキスト使用状況（🔥📊）=====  [context_window メタデータ利用]
-USED_PCT=$(echo "$input"      | jq -r '.context_window.used_percentage      // 0')
-REMAIN_PCT=$(echo "$input"    | jq -r '.context_window.remaining_percentage // 0')
-AUTO_LEFT=$(echo "$input"     | jq -r '.context_window.auto_compact_remaining_tokens // empty')
-
-# 空文字列の場合は0に設定
-USED_PCT=${USED_PCT:-0}
-REMAIN_PCT=${REMAIN_PCT:-0}
-
-COLOR="\033[32m"
-[ "$(printf '%.0f' "$USED_PCT" 2>/dev/null || echo 0)" -ge 70 ] 2>/dev/null && COLOR="\033[33m"
-[ "$(printf '%.0f' "$USED_PCT" 2>/dev/null || echo 0)" -ge 90 ] 2>/dev/null && COLOR="\033[31m"
-
-FIRE_SEG="🔥 \033[1m${COLOR}$(printf '%.0f' "$USED_PCT" 2>/dev/null || echo 0)%%\033[0m"
-BAR_LEN=20
-FILLED=$(( BAR_LEN * $(printf '%.0f' "$USED_PCT" 2>/dev/null || echo 0) / 100 ))
-BAR="$(printf '%*s' "$FILLED" '' | tr ' ' '=')"
-BAR="$BAR$(printf '%*s' $((BAR_LEN-FILLED)) '' | tr ' ' '-')"
-if [ -n "${AUTO_LEFT:-}" ]; then
-  AUTO_SEG="📊 [$BAR] 残 ${AUTO_LEFT}tks"
-else
-  AUTO_SEG="📊 [$BAR] 残 ${REMAIN_PCT%%%}%"
+# キャッシュなし or 期限切れ → Haiku Probe
+if [ -z "$RATE_HEADERS" ] && [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+    RATE_HEADERS=$(curl -s -I -X POST "https://api.anthropic.com/v1/messages" \
+        -H "x-api-key: $ANTHROPIC_API_KEY" \
+        -H "anthropic-version: 2023-06-01" \
+        -H "content-type: application/json" \
+        -d '{"model":"claude-haiku-4-5-20251001","max_tokens":1,"messages":[{"role":"user","content":"hi"}]}' \
+        2>/dev/null | tr -d '\r') || RATE_HEADERS=""
+    [ -n "$RATE_HEADERS" ] && echo "$RATE_HEADERS" > "$CACHE_FILE" || true
 fi
 
-# ===== ccusage 連携（💰 ブロック残りなど）=====  [ccusage statusline] [web:37][web:41]
-COST_SEG=""
-if command -v ccusage >/dev/null 2>&1; then
-  # ccusage 側の statusline 出力をそのまま食う or JSON で整形
-  CCJSON=$(ccusage blocks --json 2>/dev/null || echo '')
-  if [ -n "$CCJSON" ]; then
-    SESSION_COST=$(echo "$CCJSON" | jq -r '.current_block.session_cost   // "?"' 2>/dev/null || echo "?")
-    TODAY_COST=$(echo   "$CCJSON" | jq -r '.today.total_cost             // "?"' 2>/dev/null || echo "?")
-    BLOCK_LEFT=$(echo   "$CCJSON" | jq -r '.current_block.time_remaining // "?"' 2>/dev/null || echo "?")
-    COST_SEG="💰 ${SESSION_COST} / 今日 ${TODAY_COST} / 残 ${BLOCK_LEFT}"
-  fi
+# === Line 2/3 出力 (APIキーあり + レート制限取得成功時) ===
+if [ -n "$RATE_HEADERS" ]; then
+    # requests ヘッダー抽出
+    REQ_REMAINING=$(echo "$RATE_HEADERS" | grep -i '^anthropic-ratelimit-requests-remaining:' | awk '{print $2}' | head -1 | tr -d '[:space:]')
+    REQ_LIMIT=$(    echo "$RATE_HEADERS" | grep -i '^anthropic-ratelimit-requests-limit:'     | awk '{print $2}' | head -1 | tr -d '[:space:]')
+    REQ_RESET=$(    echo "$RATE_HEADERS" | grep -i '^anthropic-ratelimit-requests-reset:'     | awk '{print $2}' | head -1 | tr -d '[:space:]')
+
+    # tokens ヘッダー抽出
+    TOK_REMAINING=$(echo "$RATE_HEADERS" | grep -i '^anthropic-ratelimit-tokens-remaining:' | awk '{print $2}' | head -1 | tr -d '[:space:]')
+    TOK_LIMIT=$(    echo "$RATE_HEADERS" | grep -i '^anthropic-ratelimit-tokens-limit:'     | awk '{print $2}' | head -1 | tr -d '[:space:]')
+    TOK_RESET=$(    echo "$RATE_HEADERS" | grep -i '^anthropic-ratelimit-tokens-reset:'     | awk '{print $2}' | head -1 | tr -d '[:space:]')
+
+    # パーセンテージ計算 (使用率 = (limit - remaining) / limit * 100)
+    REQ_PCT=0
+    if [ -n "$REQ_LIMIT" ] && [ "${REQ_LIMIT:-0}" -gt 0 ] 2>/dev/null; then
+        REQ_USED=$(( REQ_LIMIT - ${REQ_REMAINING:-0} ))
+        REQ_PCT=$(( REQ_USED * 100 / REQ_LIMIT ))
+    fi
+
+    TOK_PCT=0
+    if [ -n "$TOK_LIMIT" ] && [ "${TOK_LIMIT:-0}" -gt 0 ] 2>/dev/null; then
+        TOK_USED=$(( TOK_LIMIT - ${TOK_REMAINING:-0} ))
+        TOK_PCT=$(( TOK_USED * 100 / TOK_LIMIT ))
+    fi
+
+    REQ_BAR=$(make_bar "$REQ_PCT")
+    TOK_BAR=$(make_bar "$TOK_PCT")
+    REQ_RESET_STR=$(format_reset "$REQ_RESET")
+    TOK_RESET_STR=$(format_reset "$TOK_RESET")
+
+    # Line 2: requests ウィンドウ (⏱ 5h)
+    echo "⏱ 5h  ${REQ_BAR}  ${REQ_PCT}%  ${REQ_RESET_STR}"
+
+    # Line 3: tokens ウィンドウ (📅 7d)
+    echo "📅 7d  ${TOK_BAR}  ${TOK_PCT}%  ${TOK_RESET_STR}"
 fi
-
-# ===== 3 行目用: レスポンスタイム / ネットワーク / 要約 =====
-# total_api_duration_ms があればレスポンスタイムに流用 [web:20][web:35]
-RESP_MS=$(echo "$input" | jq -r '.metrics.total_api_duration_ms // 0')
-# 空文字列の場合は0に設定
-RESP_MS=${RESP_MS:-0}
-if [ "$RESP_MS" -gt 0 ] 2>/dev/null; then
-  RESP_SEG="⚡ ${RESP_MS}ms"
-else
-  RESP_SEG="⚡ n/a"
-fi
-
-# ネットワーク状態は直接のフィールドがないため簡易表示
-NET_SEG="🌐 online"
-
-# 最終メッセージ要約/進行中タスク名（高度例）
-# transcript_path から自前で要約を読む or 別プロセスで生成したメタデータを読む想定。[web:39]
-TASK_SEG=""
-TRANSCRIPT_PATH=$(echo "$input" | jq -r '.transcript_path // empty')
-if [ -n "$TRANSCRIPT_PATH" ] && [ -r "$TRANSCRIPT_PATH" ]; then
-  # 例: 外部で書き出した last_task.txt を読む（なければ空のまま）
-  META_DIR="$(dirname "$TRANSCRIPT_PATH")"
-  if [ -f "$META_DIR/last_task.txt" ]; then
-    LAST_TASK=$(head -c 60 "$META_DIR/last_task.txt")
-    TASK_SEG=" 🔍 ${LAST_TASK}"
-  fi
-fi
-
-# ===== 出力 =====
-
-# 1行目: 現在コンテキスト
-echo -e "🤖 $MODEL  📁 $PROJECT$GIT_SEG  🔑 ${SESSION_ID}  🖥 ${ENV_TAG}"
-
-# 2行目: 使用状況・お金まわり
-if [ -n "$COST_SEG" ]; then
-  echo -e "$FIRE_SEG  $AUTO_SEG  |  $COST_SEG"
-else
-  echo -e "$FIRE_SEG  $AUTO_SEG"
-fi
-
-# 3行目: レスポンスタイム・ネットワーク・タスク
-echo -e "$RESP_SEG  $NET_SEG$TASK_SEG"
