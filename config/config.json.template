@@ -1,73 +1,95 @@
 {
-  "ports": [9222, 9223, 9224, 9225, 9226, 9227, 9228, 9229],
-  "zDrive": "X:\\",
-  "zDriveUncPath": "\\\\<your-server>\\<share-name>",
+  "_comment": "AI CLI スタートアップツール設定テンプレート v2.0.0 - コピーしてconfig.jsonとして使用",
+  "version": "2.0.0",
+  "projectsDir": "X:\\",
+  "sshProjectsDir": "Z:\\",
+  "projectsDirUnc": "\\\\<your-linux-host>\\LinuxHDD",
   "linuxHost": "<your-linux-host>",
   "linuxBase": "/mnt/LinuxHDD",
-  "edgeExe": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
-  "chromeExe": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
-  "defaultBrowser": "edge",
-  "autoCleanup": true,
-  "statusline": {
-    "enabled": true,
-    "showDirectory": true,
-    "showGitBranch": true,
-    "showModel": true,
-    "showClaudeVersion": true,
-    "showOutputStyle": true,
-    "showContext": true
-  },
-  "claudeCode": {
-    "env": {
-      "ENABLE_TOOL_SEARCH": "true",
-      "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
-      "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "50",
-      "CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION": "true"
+  "localExcludes": [],
+  "tools": {
+    "defaultTool": "claude",
+    "claude": {
+      "enabled": true,
+      "displayName": "Claude Code (Anthropic)",
+      "command": "claude",
+      "args": [
+        "--dangerously-skip-permissions"
+      ],
+      "installCommand": "npm install -g @anthropic-ai/claude-code",
+      "checkCommand": "claude --version",
+      "env": {
+        "ENABLE_TOOL_SEARCH": "true",
+        "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+        "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "50",
+        "CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION": "true"
+      },
+      "settings": {
+        "language": "日本語",
+        "outputStyle": "Explanatory",
+        "alwaysThinkingEnabled": true,
+        "spinnerTipsEnabled": true,
+        "prefersReducedMotion": false,
+        "promptSuggestionEnabled": true,
+        "respectGitignore": true,
+        "autoUpdatesChannel": "latest",
+        "includeCoAuthoredBy": true
+      },
+      "apiKeyEnvVar": "ANTHROPIC_API_KEY"
     },
-    "settings": {
-      "language": "日本語",
-      "outputStyle": "Explanatory",
-      "alwaysThinkingEnabled": true,
-      "spinnerTipsEnabled": true,
-      "prefersReducedMotion": false,
-      "promptSuggestionEnabled": true,
-      "respectGitignore": true,
-      "autoUpdatesChannel": "latest",
-      "includeCoAuthoredBy": true
+    "codex": {
+      "enabled": true,
+      "displayName": "Codex CLI (OpenAI)",
+      "command": "codex",
+      "args": [],
+      "installCommand": "npm install -g @openai/codex",
+      "checkCommand": "codex --version",
+      "env": {
+        "OPENAI_API_KEY": ""
+      },
+      "apiKeyEnvVar": "OPENAI_API_KEY"
+    },
+    "copilot": {
+      "enabled": true,
+      "displayName": "GitHub Copilot CLI",
+      "command": "copilot",
+      "args": [
+        "--yolo"
+      ],
+      "installCommand": "npm install -g @githubnext/github-copilot-cli",
+      "checkCommand": "copilot --version",
+      "env": {},
+      "apiKeyEnvVar": ""
     }
   },
-  "tmux": {
-    "enabled": true,
-    "autoInstall": true,
-    "defaultLayout": "auto",
-    "panes": {
-      "devtools":      { "enabled": true, "refreshInterval": 5 },
-      "mcpHealth":     { "enabled": true, "refreshInterval": 30 },
-      "gitStatus":     { "enabled": true, "refreshInterval": 10 },
-      "resourceUsage": { "enabled": true, "refreshInterval": 15 },
-      "agentTeams":    { "enabled": true, "refreshInterval": 5 },
-      "logTail":       { "enabled": false, "logFile": "", "lines": 50 }
-    },
-    "theme": {
-      "statusBarColor": "colour39",
-      "paneActiveColor": "colour154",
-      "paneBorderColor": "colour240"
-    }
+  "ssh": {
+    "autoCleanup": true,
+    "options": [
+      "-t",
+      "-o ControlMaster=no",
+      "-o ControlPath=none"
+    ]
   },
-  "mcp": {
+  "logging": {
     "enabled": true,
-    "autoSetup": true,
-    "requiredServers": [
-      "brave-search",
-      "ChromeDevTools",
-      "context7",
-      "github",
-      "memory",
-      "playwright",
-      "plugin:claude-mem:mem-search",
-      "sequential-thinking"
-    ],
-    "githubToken": "",
-    "braveApiKey": ""
+    "logDir": "logs",
+    "logPrefix": "ai-startup",
+    "successKeepDays": 30,
+    "failureKeepDays": 90
+  },
+  "backupConfig": {
+    "enabled": true,
+    "backupDir": "config/backups",
+    "maxBackups": 10,
+    "maskSensitive": true,
+    "sensitiveKeys": [
+      "tools.claude.env.ANTHROPIC_API_KEY",
+      "tools.codex.env.OPENAI_API_KEY"
+    ]
+  },
+  "recentProjects": {
+    "enabled": true,
+    "maxHistory": 10,
+    "historyFile": "%USERPROFILE%\\.ai-startup\\recent-projects.json"
   }
 }
