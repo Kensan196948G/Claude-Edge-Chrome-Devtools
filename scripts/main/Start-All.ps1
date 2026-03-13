@@ -221,4 +221,5 @@ Write-Info "起動スクリプト: $targetScript"
 Write-Host ""
 
 & $targetScript @params
-exit $LASTEXITCODE
+$exitCode = if ($null -ne $LASTEXITCODE) { $LASTEXITCODE } else { 0 }
+exit $exitCode
