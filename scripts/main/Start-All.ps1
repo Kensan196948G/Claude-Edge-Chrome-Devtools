@@ -220,6 +220,6 @@ if ($Local) { $params['Local'] = $true }
 Write-Info "起動スクリプト: $targetScript"
 Write-Host ""
 
+$LASTEXITCODE = 0
 & $targetScript @params
-$exitCode = if ($null -ne $LASTEXITCODE) { $LASTEXITCODE } else { 0 }
-exit $exitCode
+exit $LASTEXITCODE
