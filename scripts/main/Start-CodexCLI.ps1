@@ -81,7 +81,12 @@ try {
             exit 0
         }
 
-        Sync-ProjectTemplate -TemplatePath (Join-Path $ScriptRoot 'scripts\templates\AGENTS.md') -TargetPath (Join-Path $localProjectDir 'AGENTS.md') -Label 'AGENTS.md'
+        # Codex\AGENTS.md を正規ソースとして使用（フォールバック: scripts\templates\AGENTS.md）
+        $agentsTemplatePath = Join-Path $ScriptRoot 'Codex\AGENTS.md'
+        if (-not (Test-Path $agentsTemplatePath)) {
+            $agentsTemplatePath = Join-Path $ScriptRoot 'scripts\templates\AGENTS.md'
+        }
+        Sync-ProjectTemplate -TemplatePath $agentsTemplatePath -TargetPath (Join-Path $localProjectDir 'AGENTS.md') -Label 'AGENTS.md'
         & codex @($toolConfig.args)
         $launchContext.Result = if ($LASTEXITCODE -eq 0) { 'success' } else { 'failure' }
         exit $LASTEXITCODE

@@ -74,8 +74,13 @@ try {
         Set-Location $projectDir
         Set-LauncherEnvironment -EnvMap $toolConfig.env
 
+        # CopilotCLI\AGENTS.md を正規ソースとして使用（フォールバック: scripts\templates\copilot-instructions.md）
+        $copilotTemplatePath = Join-Path $StartupRoot 'CopilotCLI\AGENTS.md'
+        if (-not (Test-Path $copilotTemplatePath)) {
+            $copilotTemplatePath = Join-Path $StartupRoot 'scripts\templates\copilot-instructions.md'
+        }
         Sync-ProjectTemplate `
-            -TemplatePath (Join-Path $StartupRoot 'scripts\templates\copilot-instructions.md') `
+            -TemplatePath $copilotTemplatePath `
             -TargetPath (Join-Path $projectDir '.github\copilot-instructions.md') `
             -Label 'copilot-instructions.md' `
             -EnsureParentDirectory
