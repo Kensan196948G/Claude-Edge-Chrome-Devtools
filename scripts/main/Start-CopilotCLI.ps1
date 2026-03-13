@@ -88,8 +88,11 @@ try {
             exit 0
         }
 
-        & $command @arguments
-        $exitCode = if ($null -ne $LASTEXITCODE) { [int]$LASTEXITCODE } else { 0 }
+        # Start-Process -NoNewWindow -Wait を使用してコンソール制御を正しく渡す
+        # & $command @arguments では PowerShell の引数展開が問題を引き起こす場合がある
+        $process = Start-Process -FilePath $command -ArgumentList $arguments `
+            -WorkingDirectory $projectDir -NoNewWindow -Wait -PassThru
+        $exitCode = if ($null -ne $process -and $null -ne $process.ExitCode) { $process.ExitCode } else { 0 }
         $launchContext.Result = if ($exitCode -eq 0) { 'success' } else { 'failure' }
         exit $exitCode
     }
