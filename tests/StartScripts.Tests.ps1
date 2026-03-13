@@ -160,7 +160,7 @@ Describe 'Start-*.ps1 dry-run flows' {
         $LASTEXITCODE | Should -Be 0
         $output | Should -Match 'SSH_CAPTURE'
         (Get-Content (Join-Path $script:SshCaptureRoot 'script-name.txt') -Raw) | Should -Match 'run-copilot-demo\.sh'
-        (Get-Content (Join-Path $script:SshCaptureRoot 'script.sh') -Raw) | Should -Match 'gh copilot'
+        (Get-Content (Join-Path $script:SshCaptureRoot 'script.sh') -Raw) | Should -Match 'copilot'
     }
 }
 

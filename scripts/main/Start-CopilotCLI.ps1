@@ -96,10 +96,9 @@ try {
 
     $linuxProject = "$linuxBase/$Project"
 
-    $joinedArguments = if (@($arguments).Count -gt 0) { $arguments -join ' ' } else { '' }
-
-    # ssh -tt HOST "cd PROJECT && gh copilot ARGS" の直接コマンド
-    $runScript = "cd '$linuxProject' && $command $joinedArguments"
+    # SSH（Linux）モードでは config と同じ copilot --yolo を使用
+    $sshArgs = if (@($arguments).Count -gt 0) { $arguments -join ' ' } else { '--yolo' }
+    $runScript = "cd '$linuxProject' && $command $sshArgs"
 
     if ($DryRun) {
         $lines = New-LauncherDryRunMessage -Command $command -LinuxHost $linuxHost -RemoteScript $runScript
