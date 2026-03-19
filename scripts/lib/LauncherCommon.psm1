@@ -198,11 +198,12 @@ function Resolve-LauncherProject {
     Show-LauncherProjectChoices -Projects $dirs.Name -Local:$Local -LinuxHost $LinuxHost
 
     $num = Read-Host "番号を入力してください"
-    if (-not ($num -as [int]) -or $num -lt 1 -or $num -gt $dirs.Count) {
+    $numInt = $num -as [int]
+    if (-not $numInt -or $numInt -lt 1 -or $numInt -gt $dirs.Count) {
         throw "USER_CANCELLED"
     }
 
-    return $dirs[$num - 1].Name
+    return $dirs[$numInt - 1].Name
 }
 
 function Show-LauncherProjectChoices {
@@ -291,8 +292,11 @@ function Confirm-LauncherStart {
     Write-Host "ツール   : $ToolName"
     Write-Host "プロジェクト: $Project"
     Write-Host "実行モード: $ModeLabel"
-    $confirm = Read-Host "開始しますか？ (y/N)"
-    return ($confirm -match '^(y|yes)$')
+    $confirm = Read-Host "開始しますか？ (Y/n)"
+    if ([string]::IsNullOrWhiteSpace($confirm)) {
+        return $true
+    }
+    return ($confirm -notmatch '^(n|no)$')
 }
 
 function Set-LauncherEnvironment {
