@@ -113,11 +113,11 @@ jobs:
             '"zDrive"',
             'claudeCode'
           )
-          $targets = @('README.md', 'CLAUDE.md', 'docs', 'config')
+          $targets = @('README.md', 'CLAUDE.md') + @(Get-ChildItem -Path docs, config -Recurse -File | ForEach-Object { $_.FullName })
           foreach ($pattern in $patterns) {
-            $found = rg -n $pattern $targets
-            if ($LASTEXITCODE -eq 0) {
-              $found | Write-Host
+            $found = $targets | Where-Object { Test-Path $_ } | ForEach-Object { Select-String -Path $_ -Pattern $pattern -ErrorAction SilentlyContinue }
+            if ($found) {
+              $found | ForEach-Object { Write-Host "$($_.Path):$($_.LineNumber): $($_.Line)" }
               throw "旧構成の参照が残っています: $pattern"
             }
           }
