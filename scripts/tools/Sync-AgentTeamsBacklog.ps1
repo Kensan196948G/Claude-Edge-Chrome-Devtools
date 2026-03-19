@@ -101,7 +101,7 @@ foreach ($line in $taskLines) {
         break
     }
     if ($inExtracted -and $line -match '^\d+\.\s') {
-        $currentExtracted += ($line -replace '^\d+\.\s+(?:\[[^\]]+\])+?\s*', '')
+        $currentExtracted += ($line -replace '^\d+\.\s+(?:\[[^\]]+\])+\s*', '')
     }
 }
 
